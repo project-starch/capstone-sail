@@ -102,11 +102,11 @@ function step(step_no : int) -> bool = {
             let ast = ext_decode_compressed(h);
             if   get_config_print_instr()
             then {
-              print_instr("[" ^ string_of_int(step_no) ^ "] [" ^ to_str(cur_privilege) ^ "]: " ^ BitStr(PC) ^ " (" ^ BitStr(h) ^ ") " ^ to_str(ast));
+              print_instr("[" ^ string_of_int(step_no) ^ "] [" ^ to_str(cur_privilege) ^ "]: " ^ BitStr(get_arch_pc()) ^ " (" ^ BitStr(h) ^ ") " ^ to_str(ast));
             };
             /* check for RVC once here instead of every RVC execute clause. */
             if haveRVC() then {
-              nextPC = PC + 2;
+              nextPC = get_arch_pc() + 2;
               (execute(ast), true)
              } else {
               handle_illegal();
@@ -118,9 +118,9 @@ function step(step_no : int) -> bool = {
             let ast = ext_decode(w);
             if   get_config_print_instr()
             then {
-              print_instr("[" ^ string_of_int(step_no) ^ "] [" ^ to_str(cur_privilege) ^ "]: " ^ BitStr(PC) ^ " (" ^ BitStr(w) ^ ") " ^ to_str(ast));
+              print_instr("[" ^ string_of_int(step_no) ^ "] [" ^ to_str(cur_privilege) ^ "]: " ^ BitStr(get_arch_pc()) ^ " (" ^ BitStr(w) ^ ") " ^ to_str(ast));
             };
-            nextPC = PC + 4;
+            nextPC = get_arch_pc() + 4;
             (execute(ast), true)
           }
         }

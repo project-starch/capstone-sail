@@ -415,6 +415,8 @@ enum biop_zbs = {RISCV_BCLRI, RISCV_BEXTI, RISCV_BINVI, RISCV_BSETI}
 
 enum extop_zbb = {RISCV_SEXTB, RISCV_SEXTH, RISCV_ZEXTH}
 
+enum capstone_op = {CAPSTONE_QUERY, CAPSTONE_DROP}
+
 val sep : unit <-> string
 mapping sep : unit <-> string = {
   ()     <-> opt_spc() ^ "," ^ def_spc()

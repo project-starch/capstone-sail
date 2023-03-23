@@ -97,7 +97,7 @@ function initial_analysis (instr:ast) -> (regfps,regfps,regfps,niafps,diafp,inst
      RISCV_JAL(imm, rd) => {
             if (rd == 0b00000) then () else oR = RFull(GPRstr(rd)) :: oR;
             let offset : bits(64) = EXTS(imm) in
-            Nias = [| NIAFP_concrete_address (PC + offset) |];
+            Nias = [| NIAFP_concrete_address (get_arch_pc() + offset) |];
             ik = IK_branch();
      },
      RISCV_JALR(imm, rs, rd) => {
@@ -112,7 +112,7 @@ function initial_analysis (instr:ast) -> (regfps,regfps,regfps,niafps,diafp,inst
             if (rs1 == 0b00000) then () else iR = RFull(GPRstr(rs1)) :: iR;
             ik = IK_branch();
             let offset : bits(64) = EXTS(imm) in
-            Nias = [| NIAFP_concrete_address(PC + offset), NIAFP_successor() |];
+            Nias = [| NIAFP_concrete_address(get_arch_pc() + offset), NIAFP_successor() |];
       },
       ITYPE(imm, rs, rd, op) => {
             if (rs == 0b00000) then () else iR = RFull(GPRstr(rs)) :: iR;
@@ -270,7 +270,7 @@ function initial_analysis (instr:ast) -> (regfps,regfps,regfps,niafps,diafp,inst
      RISCV_JAL(imm, rd) => {
 	    if (rd == 0b00000) then () else oR = RFull(GPRstr(rd)) :: oR;
             let offset : bits(64) = EXTS(imm) in
-            Nias = [| NIAFP_concrete_address (PC + offset) |];
+            Nias = [| NIAFP_concrete_address (get_arch_pc() + offset) |];
             ik = IK_branch();
      },
      RISCV_JALR(imm, rs, rd) => {
@@ -285,7 +285,7 @@ function initial_analysis (instr:ast) -> (regfps,regfps,regfps,niafps,diafp,inst
             if (rs1 == 0b00000) then () else iR = RFull(GPRstr(rs1)) :: iR;
             ik = IK_branch();
             let offset : bits(64) = EXTS(imm) in
-            Nias = [| NIAFP_concrete_address(PC + offset), NIAFP_successor() |];
+            Nias = [| NIAFP_concrete_address(get_arch_pc() + offset), NIAFP_successor() |];
       },
       ITYPE(imm, rs, rd, op) => {
             if (rs == 0b00000) then () else iR = RFull(GPRstr(rs)) :: iR;

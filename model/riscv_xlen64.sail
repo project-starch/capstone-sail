@@ -71,3 +71,11 @@
 type xlen       : Int = 64
 type xlen_bytes : Int = 8
 type xlenbits         = bits(xlen)
+
+/* Define the length of a capability. Here we use the CHERI Concentrate format. */
+type caplen        : Int = 128
+type caplen_bytes  : Int = 16
+type caplenbits          = bits(caplen)
+
+type captag              = bool
+

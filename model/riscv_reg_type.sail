@@ -67,19 +67,41 @@
 /*=======================================================================================*/
 
 /* default register type */
-type regtype = xlenbits
+/* this stores raw cap bits along with a tag */
+
+
+union regtype = {
+    CapVal : cap_t, /* capability */
+    RawVal : xlenbits /* raw value */
+}
+
+type reglen : Int = caplen + 1
+type regbits = bits(reglen)
+
+function reg_to_bits(reg : regtype) -> regbits = {
+    match (reg) {
+        CapVal(c : cap_t) => 0b1 @ c,
+        RawVal(v : xlenbits) =>   EXTZ(0b0) : bits(reglen - xlen) @ v
+    }
+}
+
+/* This takes the lowest xlen bits which would correspond to the 
+scalar value part of the capability if it one */
+function reg_to_xlenbits(reg: regtype) -> xlenbits = {
+    reg_to_bits(reg)[63..0]
+}
 
 /* default zero register */
-let zero_reg : regtype = EXTZ(0x0)
+let zero_reg : regtype = RawVal(EXTZ(0b0))
 
 /* default register printer */
-val RegStr : regtype -> string
-function RegStr(r) = BitStr(r)
+function RegStr(r : regtype) -> string = BitStr(reg_to_bits(r))
 
 /* conversions */
 
-val regval_from_reg : regtype -> xlenbits
-function regval_from_reg(r) = r
+/*val regval_from_reg : regtype -> xlenbits*/
+/*function regval_from_reg(r) = r*/
 
-val regval_into_reg : xlenbits -> regtype
-function regval_into_reg(v) = v
+/*val regval_into_reg : xlenbits -> regtype*/
+/*function regval_into_reg(v) = v*/
+

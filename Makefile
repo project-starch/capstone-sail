@@ -36,6 +36,8 @@ SAIL_DEFAULT_INST += riscv_insts_zks.sail
 SAIL_DEFAULT_INST += riscv_insts_zbkb.sail
 SAIL_DEFAULT_INST += riscv_insts_zbkx.sail
 
+SAIL_DEFAULT_INST += riscv_insts_capstone.sail
+
 SAIL_SEQ_INST  = $(SAIL_DEFAULT_INST) riscv_jalr_seq.sail
 SAIL_RMEM_INST = $(SAIL_DEFAULT_INST) riscv_jalr_rmem.sail riscv_insts_rmem.sail
 
@@ -65,7 +67,7 @@ endif
 # Non-instruction sources
 PRELUDE = prelude.sail prelude_mapping.sail $(SAIL_XLEN) $(SAIL_FLEN) prelude_mem_metadata.sail prelude_mem.sail
 
-SAIL_REGS_SRCS = riscv_reg_type.sail riscv_freg_type.sail riscv_regs.sail riscv_pc_access.sail riscv_sys_regs.sail
+SAIL_REGS_SRCS = riscv_types_cap.sail riscv_reg_type.sail riscv_freg_type.sail riscv_regs.sail riscv_pc_access.sail riscv_sys_regs.sail
 SAIL_REGS_SRCS += riscv_pmp_regs.sail riscv_pmp_control.sail
 SAIL_REGS_SRCS += riscv_ext_regs.sail $(SAIL_CHECK_SRCS)
 

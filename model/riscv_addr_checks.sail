@@ -116,8 +116,15 @@ type ext_data_addr_error = unit
    Extensions might override and add additional checks. */
 function ext_data_get_addr(base : regidx, offset : xlenbits, acc : AccessType(ext_access_type), width : word_width)
          -> Ext_DataAddr_Check(ext_data_addr_error) =
-  let addr = X(base) + offset in
-  Ext_DataAddr_OK(addr)
+  // FIXME: need to check whether the register contains a cap or raw data
+  let base_addr : xlenbits = match (X(base) : regtype) {
+    CapVal(cap) => {
+      let (cursor, _, _, _, _) = decode_cap(cap) in
+      cursor
+    },
+    RawVal(v) => v
+  } in
+  Ext_DataAddr_OK(base_addr + offset)
 
 function ext_handle_data_check_error(err : ext_data_addr_error) -> unit =
   ()

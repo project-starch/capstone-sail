@@ -72,6 +72,7 @@ function main () : unit -> unit = {
 
   // PC = __GetSlice_int(64, elf_entry(), 0);
   PC = sail_zero_extend(0x1000, sizeof(xlen));
+  /*PC = RawVal(sail_zero_extend(0x1000, sizeof(xlen)));*/
   print_bits("PC = ", PC);
 
   try {

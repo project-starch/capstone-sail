@@ -118,7 +118,7 @@ but this is difficult
 */
 
 function clause execute (RISCV_JAL(imm, rd)) = {
-  let t : xlenbits = PC + EXTS(imm);
+  let t : xlenbits = get_arch_pc() + EXTS(imm);
   /* Extensions get the first checks on the prospective target address. */
   match ext_control_check_pc(t) {
     Ext_ControlAddr_Error(e) => {
@@ -172,8 +172,9 @@ mapping clause encdec = BTYPE(imm7_6 @ imm5_0 @ imm7_5_0 @ imm5_4_1 @ 0b0, rs2, 
   <-> imm7_6 : bits(1) @ imm7_5_0 : bits(6) @ rs2 @ rs1 @ encdec_bop(op) @ imm5_4_1 : bits(4) @ imm5_0 : bits(1) @ 0b1100011
 
 function clause execute (BTYPE(imm, rs2, rs1, op)) = {
-  let rs1_val = X(rs1);
-  let rs2_val = X(rs2);
+  // TODO add checks 
+  let rs1_val = reg_to_xlenbits(X(rs1));
+  let rs2_val = reg_to_xlenbits(X(rs2));
   let taken : bool = match op {
     RISCV_BEQ  => rs1_val == rs2_val,
     RISCV_BNE  => rs1_val != rs2_val,
@@ -182,7 +183,7 @@ function clause execute (BTYPE(imm, rs2, rs1, op)) = {
     RISCV_BLTU => rs1_val <_u rs2_val,
     RISCV_BGEU => rs1_val >=_u rs2_val
   };
-  let t : xlenbits = PC + EXTS(imm);
+  let t : xlenbits = get_arch_pc() + EXTS(imm);
   if taken then {
     /* Extensions get the first checks on the prospective target address. */
     match ext_control_check_pc(t) {
@@ -774,7 +775,7 @@ function clause execute ECALL() = {
                     },
              excinfo = (None() : option(xlenbits)),
              ext     = None() };
-  set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), PC));
+  set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), get_arch_pc()));
   RETIRE_FAIL
 }
 
@@ -792,7 +793,7 @@ function clause execute MRET() = {
   else if not(ext_check_xret_priv (Machine))
   then { ext_fail_xret_priv(); RETIRE_FAIL }
   else {
-    set_next_pc(exception_handler(cur_privilege, CTL_MRET(), PC));
+    set_next_pc(exception_handler(cur_privilege, CTL_MRET(), get_arch_pc()));
     RETIRE_SUCCESS
   }
 }
@@ -816,7 +817,7 @@ function clause execute SRET() = {
   else if not(ext_check_xret_priv (Supervisor))
   then { ext_fail_xret_priv(); RETIRE_FAIL }
   else {
-    set_next_pc(exception_handler(cur_privilege, CTL_SRET(), PC));
+    set_next_pc(exception_handler(cur_privilege, CTL_SRET(), get_arch_pc()));
     RETIRE_SUCCESS
   }
 }
@@ -830,7 +831,7 @@ mapping clause encdec = EBREAK()
   <-> 0b000000000001 @ 0b00000 @ 0b000 @ 0b00000 @ 0b1110011
 
 function clause execute EBREAK() = {
-  handle_mem_exception(PC, E_Breakpoint());
+  handle_mem_exception(get_arch_pc(), E_Breakpoint());
   RETIRE_FAIL
 }
 

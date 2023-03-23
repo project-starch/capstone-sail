@@ -79,7 +79,7 @@ function clause execute URET() = {
   then handle_illegal()
   else if not(ext_check_xret_priv(User))
   then ext_fail_xret_priv()
-  else set_next_pc(exception_handler(cur_privilege, CTL_URET(), PC));
+  else set_next_pc(exception_handler(cur_privilege, CTL_URET(), get_arch_pc()));
   RETIRE_FAIL
 }
 

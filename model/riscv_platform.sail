@@ -505,7 +505,7 @@ function handle_illegal() -> unit = {
   let t : sync_exception = struct { trap    = E_Illegal_Instr(),
                                     excinfo = info,
                                     ext     = None() };
-  set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), PC))
+  set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), PC)) // FIXME: add checks on PC
 }
 
 /* Platform-specific wait-for-interrupt */

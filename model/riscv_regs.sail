@@ -108,7 +108,7 @@ register x29 : regtype
 register x30 : regtype
 register x31 : regtype
 
-val rX : forall 'n, 0 <= 'n < 32. regno('n) -> xlenbits effect {rreg, escape}
+val rX : forall 'n, 0 <= 'n < 32. regno('n) -> regtype effect {rreg, escape}
 function rX r = {
   let v : regtype =
     match r {
@@ -146,73 +146,81 @@ function rX r = {
       31 => x31,
       _  => {assert(false, "invalid register number"); zero_reg}
     };
-  regval_from_reg(v)
+  v
 }
 
 $ifdef RVFI_DII
-val rvfi_wX : forall 'n, 0 <= 'n < 32. (regno('n), xlenbits) -> unit effect {wreg}
+val rvfi_wX : forall 'n, 0 <= 'n < 32. (regno('n), regtype) -> unit effect {wreg}
 function rvfi_wX (r,v) = {
   rvfi_int_data->rvfi_rd_wdata() = EXTZ(v);
   rvfi_int_data->rvfi_rd_addr() = to_bits(8,r);
   rvfi_int_data_present = true;
 }
 $else
-val rvfi_wX : forall 'n, 0 <= 'n < 32. (regno('n), xlenbits) -> unit
+val rvfi_wX : forall 'n, 0 <= 'n < 32. (regno('n), regtype) -> unit
 function rvfi_wX (r,v) = ()
 $endif
 
-val wX : forall 'n, 0 <= 'n < 32. (regno('n), xlenbits) -> unit effect {wreg, escape}
+val wX : forall 'n, 0 <= 'n < 32. (regno('n), regtype) -> unit effect {wreg, escape}
 function wX (r, in_v) = {
-  let v = regval_into_reg(in_v);
   match r {
     0  => (),
-    1  => x1 = v,
-    2  => x2 = v,
-    3  => x3 = v,
-    4  => x4 = v,
-    5  => x5 = v,
-    6  => x6 = v,
-    7  => x7 = v,
-    8  => x8 = v,
-    9  => x9 = v,
-    10 => x10 = v,
-    11 => x11 = v,
-    12 => x12 = v,
-    13 => x13 = v,
-    14 => x14 = v,
-    15 => x15 = v,
-    16 => x16 = v,
-    17 => x17 = v,
-    18 => x18 = v,
-    19 => x19 = v,
-    20 => x20 = v,
-    21 => x21 = v,
-    22 => x22 = v,
-    23 => x23 = v,
-    24 => x24 = v,
-    25 => x25 = v,
-    26 => x26 = v,
-    27 => x27 = v,
-    28 => x28 = v,
-    29 => x29 = v,
-    30 => x30 = v,
-    31 => x31 = v,
+    1  => x1 = in_v,
+    2  => x2 = in_v,
+    3  => x3 = in_v,
+    4  => x4 = in_v,
+    5  => x5 = in_v,
+    6  => x6 = in_v,
+    7  => x7 = in_v,
+    8  => x8 = in_v,
+    9  => x9 = in_v,
+    10 => x10 = in_v,
+    11 => x11 = in_v,
+    12 => x12 = in_v,
+    13 => x13 = in_v,
+    14 => x14 = in_v,
+    15 => x15 = in_v,
+    16 => x16 = in_v,
+    17 => x17 = in_v,
+    18 => x18 = in_v,
+    19 => x19 = in_v,
+    20 => x20 = in_v,
+    21 => x21 = in_v,
+    22 => x22 = in_v,
+    23 => x23 = in_v,
+    24 => x24 = in_v,
+    25 => x25 = in_v,
+    26 => x26 = in_v,
+    27 => x27 = in_v,
+    28 => x28 = in_v,
+    29 => x29 = in_v,
+    30 => x30 = in_v,
+    31 => x31 = in_v,
     _  => assert(false, "invalid register number")
   };
   if (r != 0) then {
      rvfi_wX(r, in_v);
      if   get_config_print_reg()
-     then print_reg("x" ^ string_of_int(r) ^ " <- " ^ RegStr(v));
+     then print_reg("x" ^ string_of_int(r) ^ " <- " ^ RegStr(in_v));
   }
 }
 
-function rX_bits(i: bits(5)) -> xlenbits = rX(unsigned(i))
+function rX_bits(i: bits(5)) -> regtype = rX(unsigned(i))
 
-function wX_bits(i: bits(5), data: xlenbits) -> unit = {
+function wX_bits(i: bits(5), data: regtype) -> unit = {
   wX(unsigned(i)) = data
 }
 
-overload X = {rX_bits, wX_bits, rX, wX}
+function rX_xlenbits(i: bits(5)) -> xlenbits = {
+  reg_to_xlenbits(rX(unsigned(i)))
+}
+
+/* Setting integer. Zero extends and removes the tag. */
+function wX_xlenbits(i: bits(5), data: xlenbits) -> unit = {
+  wX(unsigned(i)) = RawVal(data)
+}
+
+overload X = {rX_xlenbits, rX_bits, wX_bits, rX, wX, wX_xlenbits}
 
 /* register names */
 

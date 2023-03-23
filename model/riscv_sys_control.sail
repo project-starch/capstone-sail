@@ -531,14 +531,14 @@ function handle_mem_exception(addr : xlenbits, e : ExceptionType) -> unit = {
   let t : sync_exception = struct { trap    = e,
                                     excinfo = Some(addr),
                                     ext     = None() } in
-  set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), PC))
+  set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), PC)) // TODO: perform checks on the PC
 }
 
 function handle_exception(e: ExceptionType) -> unit = {
   let t : sync_exception = struct { trap    = e,
                                     excinfo = None(),
                                     ext     = None() } in
-  set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), PC))
+  set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), PC)) // TODO: perform some checks
 }
 
 function handle_interrupt(i : InterruptType, del_priv : Privilege) -> unit =
