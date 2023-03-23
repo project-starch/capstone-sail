@@ -1,5 +1,7 @@
 union clause ast = CAPSTONE_INSN : (regidx, regidx, regidx, capstone_op)
 
+/************************************************************/
+
 mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)   <-> 0b0000000 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)) = {
@@ -10,6 +12,9 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)) = {
 mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_QUERY)
   <-> "query" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
+
+/************************************************************/
+
 mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)   <-> 0b0000001 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)) = {
@@ -19,3 +24,57 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)) = {
 
 mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_DROP)
   <-> "drop" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKE)   <-> 0b0000000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKE)) = {
+    print("good execution capstone instruction revoke");
+    RETIRE_SUCCESS;
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_REVOKE)
+  <-> "revoke" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)   <-> 0b0000001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)) = {
+    print("good execution capstone instruction call");
+    RETIRE_SUCCESS;
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CALL)
+  <-> "call" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHRINK)   <-> 0b0000100 @ rs2 @ rs1 @ 0b010 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHRINK)) = {
+    print("good execution capstone instruction shrink");
+    RETIRE_SUCCESS;
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_SHRINK)
+  <-> "shrink" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TIGHTEN)   <-> 0b0000110 @ rs2 @ rs1 @ 0b010 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TIGHTEN)) = {
+    print("good execution capstone instruction tighten");
+    RETIRE_SUCCESS;
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_TIGHTEN)
+  <-> "tighten" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+
+

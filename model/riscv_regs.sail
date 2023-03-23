@@ -68,8 +68,13 @@
 
 /* program counter */
 
+/* Note that the harness code mandates that PC be of type xlenbits, so we
+store the capability for the PC separately. */
 register PC       : xlenbits
 register nextPC   : xlenbits
+
+/* Capability for the PC access. The cursor is not used. */
+register PCCap    : cap_t
 
 /* internal state to hold instruction bits for faulting instructions */
 register instbits : xlenbits
