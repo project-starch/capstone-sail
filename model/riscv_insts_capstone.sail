@@ -185,20 +185,6 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)) = {
 mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_DROP)
   <-> "drop" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
-
-/************************************************************/
-
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKE)   <-> 0b0000000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
-
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKE)) = {
-    print("good execution capstone instruction revoke");
-    RETIRE_SUCCESS
-}
-
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_REVOKE)
-  <-> "revoke" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
-
-
 /************************************************************/
 
 mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)   <-> 0b0000001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
@@ -214,7 +200,7 @@ mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CALL)
 /************************************************************/
 
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHRINK)   <-> 0b0000100 @ rs2 @ rs1 @ 0b010 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHRINK)   <-> 0b0000100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHRINK)) = {
     let rd_v : regtype = X(rd);
@@ -245,7 +231,7 @@ mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_SHRINK)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TIGHTEN)   <-> 0b0000110 @ rs2 @ rs1 @ 0b010 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TIGHTEN)   <-> 0b0000110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TIGHTEN)) = {
     let rd_v : regtype = X(rd);
@@ -272,4 +258,70 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TIGHTEN)) = {
 
 mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_TIGHTEN)
   <-> "tighten" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DELIN)   <-> 0b0000111 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DELIN)) = {
+    let rd_v : regtype = X(rd);
+    match(rd_v) {
+        CapVal(cv) if cap_type(cv) == CAP_TYPE_LIN => {
+            X(rd) = CapVal(cap_set_type(cv, CAP_TYPE_NONLIN));
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_DELIN)
+  <-> "delin" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SCC)   <-> 0b0001000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SCC)) = {
+    let rd_v : regtype = X(rd);
+    let rs1_v : regtype = X(rs1);
+    match((rd_v, rs1_v)) {
+        (CapVal(cv), RawVal(v)) => {
+            X(rd) = CapVal(cap_set_cursor(cv, v));
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_SCC)
+  <-> "scc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LCC)   <-> 0b0001110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LCC)) = {
+    let rs1_v : regtype = X(rs1);
+    /** TODO: check the original value in rd */
+    match(rs1_v) {
+        CapVal(cv) => {
+            X(rd) = RawVal(cap_cursor(cv));
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_LCC)
+  <-> "lcc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 

@@ -193,6 +193,18 @@ function cap_set_bound(cap: cap_t, new_start: xlenbits, new_end: xlenbits) -> ca
         encode_cap((cursor, new_start, new_end, ni, perm, ty))
 }
 
+function cap_set_cursor(cap: cap_t, new_cursor: xlenbits) -> cap_t = {
+    let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(cap) in
+        encode_cap((new_cursor, start_addr, end_addr, ni, perm, ty))
+}
+
+/** set both the bound and the cursor at the same time */
+function cap_set_bound_cursor(cap: cap_t, new_cursor: xlenbits, new_start: xlenbits, new_end: xlenbits) -> cap_t = {
+    let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(cap) in
+        encode_cap((new_cursor, new_start, new_end, ni, perm, ty))
+}
+
+
 function cap_shrink(cap: cap_t, new_start: xlenbits, new_end: xlenbits) -> option(cap_t) = {
     let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(cap);
     if unsigned(start_addr) <= unsigned(new_start) & 
@@ -211,3 +223,10 @@ function cap_tighten(cap: cap_t, new_perm: capperm_t) -> option(cap_t) = {
         None()
 }
 
+function cap_type(cap: cap_t) -> captype_t = {
+    let (_, _, _, _, _, ty) = decode_cap(cap) in ty
+}
+
+function cap_cursor(cap: cap_t) -> xlenbits = {
+    let (cursor, _, _, _, _, _) = decode_cap(cap) in cursor
+}
