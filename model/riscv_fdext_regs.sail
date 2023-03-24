@@ -276,7 +276,7 @@ function rF_or_X_H(i) = {
   assert(sys_enable_fdext() != sys_enable_zfinx());
   if   sys_enable_fdext()
   then nan_unbox(F(i))
-  else reg_to_bits(X(i))[15..0] // FIXME: this might not be the intended behaviour
+  else reg_bits(X(i))[15..0] // FIXME: this might not be the intended behaviour
 }
 
 val rF_or_X_S : bits(5) -> bits(32) effect {escape, rreg}
@@ -285,7 +285,7 @@ function rF_or_X_S(i) = {
   assert(sys_enable_fdext() != sys_enable_zfinx());
   if   sys_enable_fdext()
   then nan_unbox(F(i))
-  else reg_to_bits(X(i))[31..0] // FIXME: this might not be the intended behaviour
+  else reg_bits(X(i))[31..0] // FIXME: this might not be the intended behaviour
 }
 
 val rF_or_X_D : bits(5) -> bits(64) effect {escape, rreg}
@@ -295,7 +295,7 @@ function rF_or_X_D(i) = {
   if   sys_enable_fdext()
   then F(unsigned(i))
   else if sizeof(xlen) >= 64
-  then reg_to_bits(X(i))[63..0] // FIXME: this might not be the intended behaviour
+  then reg_bits(X(i))[63..0] // FIXME: this might not be the intended behaviour
   else {
     assert(i[0] == bitzero);
     if i == zeros() then zeros() else reg_to_xlenbits(X(i + 1)) @ reg_to_xlenbits(X(i))

@@ -78,24 +78,46 @@ union regtype = {
 type reglen : Int = caplen + 1
 type regbits = bits(reglen)
 
-function reg_to_bits(reg : regtype) -> regbits = {
-    match (reg) {
-        CapVal(c : cap_t) => 0b1 @ c,
-        RawVal(v : xlenbits) =>   EXTZ(0b0) : bits(reglen - xlen) @ v
+val reg_bits : regtype <-> regbits
+
+function reg_bits_forwards(r: regtype) -> regbits =  {
+    match(r) {
+        CapVal(c) => 0b1 @ c,
+        RawVal(v) => 0b0 @ EXTZ(v) : caplenbits
+    }
+}
+
+function reg_bits_forwards_matches(r: regtype) -> bool = {
+    true
+}
+
+function reg_bits_backwards(b: regbits) -> regtype = {
+    match(b) {
+        0b1 @ c: cap_t => CapVal(c),
+        0b0 @ z : bits(capxlen) @ v : xlenbits if z == (EXTZ(0b0) : bits(capxlen)) => RawVal(v),
+        _ => RawVal(EXTZ(0b0))
+    }
+}
+
+function reg_bits_backwards_matches(b: regbits) -> bool = {
+    match(b) {
+        0b1 @ _: caplenbits => true,
+        0b0 @ z : bits(capxlen) @ v : xlenbits if z == (EXTZ(0b0) : bits(capxlen)) => true,
+        _ => false
     }
 }
 
 /* This takes the lowest xlen bits which would correspond to the 
 scalar value part of the capability if it one */
 function reg_to_xlenbits(reg: regtype) -> xlenbits = {
-    reg_to_bits(reg)[63..0]
+    reg_bits(reg)[63..0]
 }
 
 /* default zero register */
 let zero_reg : regtype = RawVal(EXTZ(0b0))
 
 /* default register printer */
-function RegStr(r : regtype) -> string = BitStr(reg_to_bits(r))
+function RegStr(r : regtype) -> string = BitStr(reg_bits(r))
 
 /* conversions */
 

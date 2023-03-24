@@ -92,3 +92,7 @@ function encode_cap(dcap: decodedcap_t) -> cap_t = {
     EXTZ(0b0)
 }
 
+
+type capxlen : Int = caplen - xlen
+
+
