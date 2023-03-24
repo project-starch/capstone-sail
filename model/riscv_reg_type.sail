@@ -119,11 +119,3 @@ let zero_reg : regtype = RawVal(EXTZ(0b0))
 /* default register printer */
 function RegStr(r : regtype) -> string = BitStr(reg_bits(r))
 
-/* conversions */
-
-/*val regval_from_reg : regtype -> xlenbits*/
-/*function regval_from_reg(r) = r*/
-
-/*val regval_into_reg : xlenbits -> regtype*/
-/*function regval_into_reg(v) = v*/
-
