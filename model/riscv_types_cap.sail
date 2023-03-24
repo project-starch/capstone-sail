@@ -19,6 +19,18 @@ mapping capperm_bits : capperm_t <-> cappermbits = {
     CAP_PERM_RWX <-> 0b100
 }
 
+infix 4 <=_p
+function operator <=_p (perm_a : capperm_t, perm_b : capperm_t) -> bool = {
+    match((perm_a, perm_b)) {
+        (p1, p2) if p1 == p2 => true,
+        (CAP_PERM_NA, _) => true,
+        (CAP_PERM_RO, p2) if p2 != CAP_PERM_NA => true,
+        (CAP_PERM_RX, CAP_PERM_RWX) => true,
+        (CAP_PERM_RW, CAP_PERM_RWX) => true,
+        _ => false
+    }
+}
+
 enum captype_t = {
     CAP_TYPE_LIN,
     CAP_TYPE_NONLIN,
@@ -161,4 +173,41 @@ function encode_cap(dcap: decodedcap_t) -> cap_t = {
 
 type capxlen : Int = caplen - xlen
 
+function cap_set_type(cap: cap_t, new_ty: captype_t) -> cap_t = {
+    let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(cap) in
+        encode_cap((cursor, start_addr, end_addr, ni, perm, new_ty))
+}
+
+function cap_set_nodeid(cap: cap_t, new_ni: capnodeidbits) -> cap_t = {
+    let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(cap) in
+        encode_cap((cursor, start_addr, end_addr, new_ni, perm, ty))
+}
+
+function cap_set_perm(cap: cap_t, new_perm: capperm_t) -> cap_t = {
+    let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(cap) in
+        encode_cap((cursor, start_addr, end_addr, ni, new_perm, ty))
+}
+
+function cap_set_bound(cap: cap_t, new_start: xlenbits, new_end: xlenbits) -> cap_t = {
+    let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(cap) in
+        encode_cap((cursor, new_start, new_end, ni, perm, ty))
+}
+
+function cap_shrink(cap: cap_t, new_start: xlenbits, new_end: xlenbits) -> option(cap_t) = {
+    let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(cap);
+    if unsigned(start_addr) <= unsigned(new_start) & 
+        unsigned(new_start) <= unsigned(new_end) &
+        unsigned(new_end) <= unsigned(end_addr) then
+        Some(encode_cap((cursor, new_start, new_end, ni, perm, ty)))
+    else
+        None()
+}
+
+function cap_tighten(cap: cap_t, new_perm: capperm_t) -> option(cap_t) = {
+    let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(cap);
+    if new_perm <=_p perm then
+        Some(encode_cap((cursor, start_addr, end_addr, ni, new_perm, ty)))
+    else
+        None()
+}
 

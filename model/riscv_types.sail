@@ -415,9 +415,14 @@ enum biop_zbs = {RISCV_BCLRI, RISCV_BEXTI, RISCV_BINVI, RISCV_BSETI}
 
 enum extop_zbb = {RISCV_SEXTB, RISCV_SEXTH, RISCV_ZEXTH}
 
-enum capstone_op = {CAPSTONE_QUERY, CAPSTONE_DROP,
-                    CAPSTONE_REVOKE, CAPSTONE_SHRINK, CAPSTONE_CALL,
-                    CAPSTONE_TIGHTEN}
+enum capstone_op = {
+    /* Back door instructions*/
+    CAPSTONE_CAPCREATE, CAPSTONE_CAPTYPE, CAPSTONE_CAPNODE,
+    CAPSTONE_CAPPERM, CAPSTONE_CAPBOUND, CAPSTONE_CAPPRINT,
+    CAPSTONE_QUERY, CAPSTONE_DROP,
+    /* Architectural instructions */
+    CAPSTONE_REVOKE, CAPSTONE_SHRINK, CAPSTONE_CALL,
+    CAPSTONE_TIGHTEN}
 
 val sep : unit <-> string
 mapping sep : unit <-> string = {
