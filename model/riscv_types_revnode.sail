@@ -31,3 +31,8 @@ function capnode_read(node_id : capnodeidbits) -> capnode_t = {
 function capnode_write(node_id : capnodeidbits, node : capnode_t) -> bool = {
   write_ram(Write_plain, capnode_addr(node_id), 16, capnode_bits(node), ())
 }
+
+function capnode_query(node_id : capnodeidbits) -> bits(1) = {
+  let (_, _, _, _, _, valid) = capnode_read(node_id) in
+    valid
+}

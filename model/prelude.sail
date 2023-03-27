@@ -207,6 +207,10 @@ function bit_to_bool b = match b {
   bitzero => false
 }
 
+function bit_to_bits(b: bit) -> bits(1) = {
+  bool_to_bits(bit_to_bool(b))
+}
+
 val to_bits : forall 'l, 'l >= 0.(atom('l), int) -> bits('l)
 function to_bits (l, n) = get_slice_int(l, n, 0)
 

@@ -76,6 +76,7 @@ type xlenbits         = bits(xlen)
 type caplen        : Int = 128
 type caplen_bytes  : Int = 16
 type caplenbits          = bits(caplen)
+let caplen_bytes_w : int = 4
 
 type captag              = bool
 
