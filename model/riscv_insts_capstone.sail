@@ -166,7 +166,18 @@ mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)   <-> 0b0000
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)) = {
     print("good execution capstone instruction query");
-    RETIRE_SUCCESS
+    let rs1_v : regtype = X(rs1);
+    match(rs1_v) {
+        RawVal(v) => {
+            let v = capnode_query(v[(capnodeidlen_v - 1)..0]);
+            print_bits("Node query: ", v);
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
 }
 
 mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_QUERY)

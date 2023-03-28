@@ -18,6 +18,7 @@ let capnodelen_bytes_w : int = 4
 let capnode_region_base : xlenbits = 0xffffffff00000000 /* TODO: adjust this value */
 
 type capnodecounterlen : Int = 33
+let capnodecounterlen_v = sizeof(capnodecounterlen)
 type capnodecounterbits = bits(capnodecounterlen)
 
 
@@ -131,5 +132,14 @@ function capnode_rcupdate(node_id : capnodeidbits, delta : capnodecounterbits) -
     capnode_free_head = node_id;
     assert(capnode_write(node_id, new_node));
   };
+}
+
+/* special rc update functions for convenience */
+function capnode_rc_inc(node_id : capnodeidbits) -> unit = {
+  capnode_rcupdate(node_id, to_bits(capnodecounterlen_v, 1));
+}
+
+function capnode_rc_dec(node_id : capnodeidbits) -> unit = {
+  capnode_rcupdate(node_id, to_bits(capnodecounterlen_v, -1));
 }
 

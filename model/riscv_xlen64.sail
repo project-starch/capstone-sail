@@ -74,9 +74,11 @@ type xlenbits         = bits(xlen)
 
 /* Define the length of a capability. Here we use the CHERI Concentrate format. */
 type caplen        : Int = 128
+let caplen_v = sizeof(caplen)
 type caplen_bytes  : Int = 16
+let caplen_bytes_v = sizeof(caplen_bytes)
 type caplenbits          = bits(caplen)
-let caplen_bytes_w : int = 4
+let caplen_bytes_w = 4
 
 type captag              = bool
 
