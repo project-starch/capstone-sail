@@ -1,0 +1,3 @@
+[submodule "capstone-tests/env"]
+	path = capstone-tests/env
+	url = https://github.com/riscv/riscv-test-env.git
