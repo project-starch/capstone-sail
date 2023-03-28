@@ -55,6 +55,7 @@ mapping captype_bits : captype_t <-> captypebits = {
 }
 
 type capnodeidlen : Int = 31
+let capnodeidlen_v = sizeof(capnodeidlen)
 type capnodeidbits = bits(capnodeidlen)
 
 
