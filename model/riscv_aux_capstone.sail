@@ -31,3 +31,14 @@ function mem_overwrite(addr: xlenbits, size: xlenbits) -> unit = {
         start_addr = start_addr + to_bits(xlen_val, caplen_bytes_v);
     }
 }
+
+function reg_moved(v: regtype) -> regtype = {
+    match(v) {
+        CapVal(c) if cap_type(c) != CAP_TYPE_NONLIN => {
+            RawVal(EXTZ(0b0))
+        },
+        _ => {
+            v
+        }
+    }
+}

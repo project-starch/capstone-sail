@@ -320,9 +320,10 @@ mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LCC)   <-> 0b000111
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LCC)) = {
     let rs1_v : regtype = X(rs1);
-    /** TODO: check the original value in rd */
+    let rd_v : regtype = X(rd);
     match(rs1_v) {
         CapVal(cv) => {
+            reg_overwrite(rd_v);
             X(rd) = RawVal(cap_cursor(cv));
             RETIRE_SUCCESS
         },
@@ -336,3 +337,145 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LCC)) = {
 mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_LCC)
   <-> "lcc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SPLIT)   <-> 0b0010010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SPLIT)) = {
+    let rs1_v : regtype = X(rs1);
+    let rs2_v : regtype = X(rs2);
+    let rd_v : regtype = X(rd);
+    match((rs1_v, rs2_v)) {
+        (CapVal(c), RawVal(v)) => {
+            let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap(c);
+            if(unsigned(v) < unsigned(start_addr) | unsigned(v) > unsigned(end_addr) |
+                ty != CAP_TYPE_LIN) then {
+                handle_illegal();
+                RETIRE_FAIL
+            } else {
+                let c1_dec = (start_addr, start_addr, v, node_id, perm, ty);
+                /* duplicate the node */
+                match(capnode_duplicate(node_id, false)) {
+                    Some(new_node_id) => {
+                        let c2_dec = (v, v, end_addr, new_node_id, perm, ty);
+                        X(rs1) = CapVal(encode_cap(c1_dec));
+                        reg_overwrite(rd_v);
+                        X(rd) = CapVal(encode_cap(c2_dec));
+                        RETIRE_SUCCESS
+                    },
+                    None() => {
+                        handle_illegal();
+                        RETIRE_FAIL
+                    }
+                }
+            }
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_SPLIT)
+  <-> "split" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SEAL)   <-> 0b0001010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SEAL)) = {
+    let rd_v : regtype = X(rd);
+    match(rd_v) {
+        CapVal(c) if cap_type(c) == CAP_TYPE_LIN => {
+            X(rd) = CapVal(cap_set_type(c, CAP_TYPE_SEALED));
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_SEAL)
+  <-> "seal" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MREV)   <-> 0b0010001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MREV)) = {
+    let rd_v : regtype = X(rd);
+    let rs1_v : regtype = X(rs1);
+    match(rs1_v) {
+        CapVal(c) if cap_type(c) == CAP_TYPE_LIN => {
+            let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap(c);
+            match(capnode_duplicate(node_id, true)) {
+                Some(new_node_id) => {
+                    let old_cap = (cursor, start_addr, end_addr, new_node_id, perm, ty);
+                    let new_cap = (cursor, start_addr, end_addr, node_id, perm, CAP_TYPE_REV);
+                    X(rs1) = CapVal(encode_cap(old_cap));
+                    reg_overwrite(rd_v);
+                    X(rd) = CapVal(encode_cap(new_cap));
+                    RETIRE_SUCCESS
+                },
+                None() => {
+                    handle_illegal();
+                    RETIRE_FAIL
+                }
+            }
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_MREV)
+  <-> "mrev" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MOVC)   <-> 0b0001100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MOVC)) = {
+    let rd_v : regtype = X(rd);
+    let rs1_v : regtype = X(rs1);
+    if(rd != rs1) then {
+        reg_overwrite(rd_v); /* the dest register is overwritten */
+        X(rd) = rs1_v;
+        X(rs1) = reg_moved(rs1_v);
+    };
+    RETIRE_SUCCESS
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_MOVC)
+  <-> "movc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKE)   <-> 0b0000000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKE)) = {
+    let rs1_v : regtype = X(rs1);
+    
+    match(rs1_v) {
+        CapVal(c) if cap_type(c) == CAP_TYPE_REV => {
+            let (_, _, _, node_id, _, _) = decode_cap(c);
+            capnode_revoke(node_id);
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_REVOKE)
+  <-> "revoke" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)

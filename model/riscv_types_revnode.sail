@@ -143,3 +143,22 @@ function capnode_rc_dec(node_id : capnodeidbits) -> unit = {
   capnode_rcupdate(node_id, to_bits(capnodecounterlen_v, -1));
 }
 
+/* duplicate node */
+function capnode_duplicate(node_id : capnodeidbits, as_child : bool) -> option(capnodeidbits) = {
+  let alloc = capnode_alloc();
+  match(alloc) {
+    Some(new_node_id) => {
+      old_node = capnode_read(node_id);
+      new_node = {old_node with prev = node_id};
+      if not(as_child) then
+        new_node.depth = old_node.depth + 1;
+      old_node.next = new_node_id;
+      assert(capnode_write(node_id, old_node));
+      assert(capnode_write(new_node_id, new_node));
+    },
+    None() => {
+      ()
+    }
+  };
+  alloc
+}

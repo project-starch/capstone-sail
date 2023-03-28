@@ -423,7 +423,8 @@ enum capstone_op = {
     /* Architectural instructions */
     CAPSTONE_REVOKE, CAPSTONE_SHRINK, CAPSTONE_CALL,
     CAPSTONE_TIGHTEN, CAPSTONE_DELIN,
-    CAPSTONE_SCC, CAPSTONE_LCC}
+    CAPSTONE_SCC, CAPSTONE_LCC, CAPSTONE_SPLIT, CAPSTONE_SEAL,
+    CAPSTONE_MOVC, CAPSTONE_MREV}
 
 val sep : unit <-> string
 mapping sep : unit <-> string = {
