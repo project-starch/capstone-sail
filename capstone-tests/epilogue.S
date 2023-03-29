@@ -1,9 +1,10 @@
+.section .text
 exit:
   RVTEST_PASS
 
   RVTEST_CODE_END
 
-    .data
+.section .data
   RVTEST_DATA_BEGIN
 
     TEST_DATA
