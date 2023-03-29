@@ -31,6 +31,10 @@ function operator <=_p (perm_a : capperm_t, perm_b : capperm_t) -> bool = {
     }
 }
 
+function capperm_involves_write(perm : capperm_t) -> bool = {
+    perm == CAP_PERM_RW | perm == CAP_PERM_RWX
+}
+
 enum captype_t = {
     CAP_TYPE_LIN,
     CAP_TYPE_NONLIN,
@@ -52,6 +56,16 @@ mapping captype_bits : captype_t <-> captypebits = {
     CAP_TYPE_UNINIT <->  0b011,
     CAP_TYPE_SEALED <->  0b100,
     CAP_TYPE_SEALEDRET <-> 0b101
+}
+
+function captype_grants_access(ty: captype_t, is_write: bool) -> bool = {
+    /* FIXME: the handling of uninitialised cap is not properly done yet */
+    ty == CAP_TYPE_LIN | ty == CAP_TYPE_NONLIN | (not(is_write) & ty == CAP_TYPE_UNINIT)
+}
+
+/* does the capability type not allow duplicating? */
+function captype_is_linear(ty: captype_t) -> bool = {
+    ty != CAP_TYPE_NONLIN
 }
 
 type capnodeidlen : Int = 31
@@ -230,4 +244,8 @@ function cap_type(cap: cap_t) -> captype_t = {
 
 function cap_cursor(cap: cap_t) -> xlenbits = {
     let (cursor, _, _, _, _, _) = decode_cap(cap) in cursor
+}
+
+function cap_nodeid(cap: cap_t) -> capnodeidbits = {
+    let (_, _, _, nid, _, _) = decode_cap(cap) in nid
 }

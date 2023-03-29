@@ -23,10 +23,9 @@ function mem_overwrite(addr: xlenbits, size: xlenbits) -> unit = {
         if(tag == 0b1) then {
             /* get the data */
             let (data, _) = read_ram(Read_plain, addr, caplen_bytes_v, false);
-            let (_, _, _, node_id, _, _) = decode_cap(data);
             assert(mem_tag_set(start_addr, 0b0)); /* clear the tag */
             /* decrement the reference count */
-            capnode_rc_dec(node_id);
+            capnode_rc_dec(cap_nodeid(data));
         };
         start_addr = start_addr + to_bits(xlen_val, caplen_bytes_v);
     }
@@ -34,11 +33,94 @@ function mem_overwrite(addr: xlenbits, size: xlenbits) -> unit = {
 
 function reg_moved(v: regtype) -> regtype = {
     match(v) {
-        CapVal(c) if cap_type(c) != CAP_TYPE_NONLIN => {
-            RawVal(EXTZ(0b0))
+        CapVal(c) => {
+            if captype_is_linear(cap_type(c)) then {
+                RawVal(EXTZ(0b0))
+            } else {
+                /* if it turns out to be duplicated, increment the ref count */
+                capnode_rc_inc(cap_nodeid(c));
+                v
+            }
         },
         _ => {
             v
+        }
+    }
+}
+
+/* control-flow related */
+
+function redirect_to_cap(c: cap_t) -> unit = {
+    /* replace the PC capability */
+    let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap(c);
+    /* the cursor does not matter so we set it to the start address */
+    PCCap = encode_cap((start_addr, start_addr, end_addr, node_id, perm, ty));
+    /* set the next PC value */
+    nextPC = cursor;
+}
+
+/* memory-access related */
+
+function cap_access_allowed(c: cap_t, width: int, req_perm: capperm_t) -> bool = {
+    let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(c) in
+    unsigned(cursor) >= unsigned(start_addr) & unsigned(cursor) + width <= unsigned(end_addr) &
+        req_perm <=_p perm & captype_grants_access(ty, capperm_involves_write(req_perm))
+}
+
+function capstone_load_mem forall 'n, 0 < 'n & 'n <= 16. (addr: xlenbits, width: atom('n)) -> regtype = {
+    let (data, _) = read_ram(Read_plain, addr, width, false);   
+    if(width == 16) then {
+        if mem_tag(addr) == 0b1 then {
+            CapVal(data)
+        } else {
+            RawVal(data[63..0])
+        }
+    } else if(width <= 8) then {
+        RawVal(EXTZ(data))
+    } else {
+        assert(false, "Invalid width for load");
+        RawVal(EXTZ(0b0))
+    }
+}
+
+function capstone_store_mem forall 'n, 0 < 'n & 'n <= 16. (addr: xlenbits, width: atom('n), v: regtype) -> bool = {
+    match(v) {
+        CapVal(c) if width == 16 => {
+            write_ram(Write_plain, addr, 16, c, ())
+        },
+        RawVal(rv) => {
+            if width == 8 then {
+                write_ram(Write_plain, addr, width, rv[63..0], ())
+            } else if width == 4 then {
+                write_ram(Write_plain, addr, width, rv[31..0], ())
+            } else if width == 2 then {
+                write_ram(Write_plain, addr, width, rv[15..0], ())
+            } else if width == 1 then {
+                write_ram(Write_plain, addr, width, rv[7..0], ())
+            } else {
+                assert(false, "Invalid width for store");
+                false
+            }
+        },
+        _ => {
+            false
+        }
+    }
+}
+
+function mem_moved(addr: xlenbits, v: regtype) -> bool = {
+    match(v) {
+        CapVal(c) => {
+            if captype_is_linear(cap_type(c)) then {
+                capstone_store_mem(addr, 16, RawVal(EXTZ(0b0)))
+            } else {
+                /* duplicated, increment the ref count */
+                capnode_rc_inc(cap_nodeid(c));
+                true
+            }
+        },
+        _ => {
+            true
         }
     }
 }
