@@ -148,13 +148,25 @@ function capnode_duplicate(node_id : capnodeidbits, as_child : bool) -> option(c
   let alloc = capnode_alloc();
   match(alloc) {
     Some(new_node_id) => {
-      old_node = capnode_read(node_id);
-      new_node = {old_node with prev = node_id};
-      if not(as_child) then
-        new_node.depth = old_node.depth + 1;
-      old_node.next = new_node_id;
-      assert(capnode_write(node_id, old_node));
-      assert(capnode_write(new_node_id, new_node));
+      if(node_id == capnode_id_invalid) then {
+        /* when node_id is invalid, just create a fresh root node */
+        let new_node : capnode_t = struct {
+          depth = EXTZ(0b0),
+          next = capnode_id_invalid,
+          prev = capnode_id_invalid,
+          counter = EXTZ(0b1), /* TODO: here we assume that the new node will be immediately referenced */
+          freed = 0b0,
+          valid = 0b1
+        } in assert(capnode_write(new_node_id, new_node));
+      } else {
+        old_node = capnode_read(node_id);
+        new_node = {old_node with prev = node_id};
+        if not(as_child) then
+          new_node.depth = old_node.depth + 1;
+        old_node.next = new_node_id;
+        assert(capnode_write(node_id, old_node));
+        assert(capnode_write(new_node_id, new_node));
+      }
     },
     None() => {
       ()

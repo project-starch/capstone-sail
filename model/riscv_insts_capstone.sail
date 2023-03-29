@@ -160,12 +160,9 @@ mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPPRINT)
 
 /************************************************************/
 
-
-
 mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)   <-> 0b0000000 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)) = {
-    print("good execution capstone instruction query");
     let rs1_v : regtype = X(rs1);
     match(rs1_v) {
         RawVal(v) => {
@@ -182,6 +179,68 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)) = {
 
 mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_QUERY)
   <-> "query" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RCUPDATE)   <-> 0b0000010 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+
+/*
+update the ref count for a given node id directly
+*/
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RCUPDATE)) = {
+    let rs1_v : regtype = X(rs1);
+    let rd_v : regtype = X(rd);
+    match((rd_v, rs1_v)) {
+        (RawVal(node_id), RawVal(delta)) => {
+            capnode_rcupdate(truncate(node_id, capnodeidlen_v), truncate(delta, capnodecounterlen_v));
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_RCUPDATE)
+  <-> "rcupdate" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_ALLOC)   <-> 0b0000011 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+
+/*
+allocates a new child node for a given revocation node and stores the id of the new node
+in the destination register
+*/
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_ALLOC)) = {
+    let rs1_v : regtype = X(rs1);
+    let rd_v : regtype = X(rd);
+    match(rs1_v) {
+        RawVal(parent_id) => {
+            match(capnode_duplicate(truncate(parent_id, capnodeidlen_v), true)) {
+                Some(new_node_id) => {
+                    reg_overwrite(rd_v);
+                    X(rd) = RawVal(EXTZ(new_node_id));
+                    RETIRE_SUCCESS
+                },
+                _ => {
+                    handle_illegal();
+                    RETIRE_FAIL
+                }
+            }
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_ALLOC)
+  <-> "alloc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
 
 
 /************************************************************/

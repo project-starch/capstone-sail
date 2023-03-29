@@ -72,6 +72,12 @@ function main () : unit -> unit = {
 
   // PC = __GetSlice_int(64, elf_entry(), 0);
   PC = sail_zero_extend(0x1000, sizeof(xlen));
+  PCCap = encode_cap((EXTZ(0b0) : xlenbits,
+                      EXTZ(0b0) : xlenbits,
+                      EXTZ(0b1) : xlenbits << to_bits(xlen_val, 20),
+                      EXTZ(0b0) : capnodeidbits,
+                      CAP_PERM_RX,
+                      CAP_TYPE_LIN));
   print_bits("PC = ", PC);
 
   try {
