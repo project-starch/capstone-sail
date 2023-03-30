@@ -544,6 +544,18 @@ function handle_exception(e: ExceptionType) -> unit = {
 function handle_interrupt(i : InterruptType, del_priv : Privilege) -> unit =
   set_next_pc(trap_handler(del_priv, true, interruptType_to_bits(i), PC, None(), None()))
 
+
+/* Capstone sysinit */
+val init_capstone : unit -> unit effect {wreg} 
+function init_capstone() = {
+    PCCap = encode_cap((EXTZ(0b0) : xlenbits,
+                        EXTZ(0b0) : xlenbits,
+                        EXTZ(0b1) : xlenbits << to_bits(xlen_val, xlen_val - 1),
+                        EXTZ(0b0) : capnodeidbits,
+                        CAP_PERM_RX,
+                        CAP_TYPE_LIN));
+}
+
 /* state state initialization */
 
 function init_sys() -> unit = {

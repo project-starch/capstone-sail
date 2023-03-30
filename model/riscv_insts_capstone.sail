@@ -252,79 +252,21 @@ mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_DROP)
 
 mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)   <-> 0b0000001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)) = {
-    let rs1_v : regtype = X(rs1);
-    let rd_v : regtype = X(rd);
-
-    let rd_v_moved = reg_moved(rd_v);
-    let rs1_v_moved = reg_moved(rs1_v);
-
-    print(RegStr(rd_v));
-    print(RegStr(rs1_v));
-    match(rd_v) {
-        CapVal(c) => { print(BitStr(capnode_query(cap_nodeid(c)))); },
-        _ => ()
-    };
-
-    if(rs1 == rd) then {
-        /* we do not allow the two operands to be the same */
-        handle_illegal();
-        RETIRE_FAIL
-    } else
-    match(rd_v) {
-        CapVal(c) if captype_is_sealed(cap_type(c)) & capnode_query(cap_nodeid(c)) == 0b1 &
-            /* check that the size is sufficient for a context */
-            unsigned(cap_bound_size(c)) >= capstone_context_size => {
-
-            let (start_addr, _) = cap_bounds(c);
-
-            let next_pc_cap = get_next_pc_cap();
-            let target_val = capstone_load_mem(start_addr, caplen_bytes_v);
-            print(RegStr(target_val));
-            match(target_val) {
-                CapVal(pc_c) => { redirect_to_cap(pc_c); },
-                _ => {
-                    handle_illegal();
-                    return RETIRE_FAIL;
-                }
-            };
-
-            reg_idx : int = 1;
-            while reg_idx < 32 do {
-                let cur_addr = start_addr + to_bits(xlen_val, reg_idx * caplen_bytes_v);
-                let reg_idx_bits = to_bits(5, reg_idx);
-                /* swap the register value */
-                let v_to_save : regtype = if reg_idx_bits == rs1 then rs1_v_moved
-                    else if reg_idx_bits == rd then rd_v_moved
-                    else X(reg_idx_bits);
-                if reg_idx == capstone_reg_ret then {
-                    /* the original value at the memory location is hence destroyed */
-                    mem_overwrite(cur_addr, to_bits(xlen_val, caplen_bytes_v));
-                    X(reg_idx_bits) = rd_v; /* TODO: change the type to sealed-ret */
-                } else if reg_idx == capstone_reg_arg then {
-                    mem_overwrite(cur_addr, to_bits(xlen_val, caplen_bytes_v));
-                    X(reg_idx_bits) = rs1_v;
-                } else {
-                    X(reg_idx_bits) = capstone_load_mem(cur_addr, caplen_bytes_v);
-                };
-                assert(capstone_store_mem(cur_addr, caplen_bytes_v, v_to_save));
-                reg_idx = reg_idx + 1;
-            };
-
-            /* save next PC cap */
-            assert(capstone_store_mem(start_addr, caplen_bytes_v, CapVal(next_pc_cap)));
-
-            RETIRE_SUCCESS
-        },
-        _ => {
-            handle_illegal();
-            RETIRE_FAIL
-        }
-    }
-}
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)) = capstone_call(rd, rs1, CAPSTONE_CALL_NORMAL)
 
 mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CALL)
   <-> "call" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RETURN)   <-> 0b0010100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RETURN)) = capstone_call(rd, rs1, CAPSTONE_CALL_RETURN)
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_RETURN)
+  <-> "return" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
 
 /************************************************************/
 
@@ -695,16 +637,11 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SWC)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
 
-    print(RegStr(rs1_v));
-    print(RegStr(rd_v));
-    
     match(rd_v) {
         CapVal(c) if cap_access_allowed(c, 16, CAP_PERM_RW) => {
             let addr = cap_cursor(c);
             mem_overwrite(addr, to_bits(xlen_val, 16));
             assert(capstone_store_mem(addr, 16, rs1_v));
-            let try_load = capstone_load_mem(addr, 16) in
-                print(RegStr(try_load));
             X(rs1) = reg_moved(rs1_v);
             RETIRE_SUCCESS
         },

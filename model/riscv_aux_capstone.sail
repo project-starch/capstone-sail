@@ -48,21 +48,6 @@ function reg_moved(v: regtype) -> regtype = {
     }
 }
 
-/* control-flow related */
-
-function redirect_to_cap(c: cap_t) -> unit = {
-    /* replace the PC capability */
-    let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap(c);
-    /* the cursor does not matter so we set it to the start address */
-    PCCap = encode_cap((start_addr, start_addr, end_addr, node_id, perm, ty));
-    /* set the next PC value */
-    nextPC = cursor;
-}
-
-function get_next_pc_cap() -> cap_t = {
-    cap_set_cursor(PCCap, nextPC)
-}
-
 /* memory-access related */
 
 function cap_access_allowed(c: cap_t, width: int, req_perm: capperm_t) -> bool = {
@@ -137,14 +122,84 @@ function check_pc_cap(pc: xlenbits, pc_cap: cap_t) -> bool = {
         CAP_PERM_RX <=_p cap_perm(pc_cap)
 }
 
-/* Capstone sysinit */
-val init_capstone : unit -> unit effect {wreg} 
-function init_capstone() = {
-    PCCap = encode_cap((EXTZ(0b0) : xlenbits,
-                        EXTZ(0b0) : xlenbits,
-                        EXTZ(0b1) : xlenbits << to_bits(xlen_val, xlen_val - 1),
-                        EXTZ(0b0) : capnodeidbits,
-                        CAP_PERM_RX,
-                        CAP_TYPE_LIN));
+
+/* control-flow related */
+
+function redirect_to_cap(c: cap_t) -> unit = {
+    /* replace the PC capability */
+    let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap(c);
+    /* the cursor does not matter so we set it to the start address */
+    PCCap = encode_cap((start_addr, start_addr, end_addr, node_id, perm, ty));
+    /* set the next PC value */
+    nextPC = cursor;
 }
 
+function get_next_pc_cap() -> cap_t = {
+    cap_set_cursor(PCCap, nextPC)
+}
+
+/* implementation for call, return, and retseal instructions */
+/* TODO: do something different for return and retseal */
+function capstone_call(rd: bits(5), rs1: bits(5), calltype: capstone_calltype) -> Retired = {
+    let rs1_v : regtype = X(rs1);
+    let rd_v : regtype = X(rd);
+
+    let rd_v_moved = reg_moved(rd_v);
+    let rs1_v_moved = reg_moved(rs1_v);
+
+    if(rs1 == rd) then {
+        /* we do not allow the two operands to be the same */
+        handle_illegal();
+        RETIRE_FAIL
+    } else
+    match(rd_v) {
+        CapVal(c) if captype_is_sealed(cap_type(c)) & capnode_query(cap_nodeid(c)) == 0b1 &
+            /* check that the size is sufficient for a context */
+            unsigned(cap_bound_size(c)) >= capstone_context_size => {
+
+            let (start_addr, _) = cap_bounds(c);
+
+            let next_pc_cap = get_next_pc_cap();
+            let target_val = capstone_load_mem(start_addr, caplen_bytes_v);
+            match(target_val) {
+                CapVal(pc_c) => { redirect_to_cap(pc_c); },
+                _ => {
+                    handle_illegal();
+                    return RETIRE_FAIL;
+                }
+            };
+
+            reg_idx : int = 1;
+            while reg_idx < 32 do {
+                let cur_addr = start_addr + to_bits(xlen_val, reg_idx * caplen_bytes_v);
+                let reg_idx_bits = to_bits(5, reg_idx);
+                /* swap the register value */
+                let v_to_save : regtype = if reg_idx_bits == rs1 then rs1_v_moved
+                    else if reg_idx_bits == rd then rd_v_moved
+                    else X(reg_idx_bits);
+                if reg_idx == capstone_reg_ret then {
+                    /* the original value at the memory location is hence destroyed */
+                    mem_overwrite(cur_addr, to_bits(xlen_val, caplen_bytes_v));
+                    X(reg_idx_bits) = rd_v; /* TODO: change the type to sealed-ret */
+                } else if reg_idx == capstone_reg_arg then {
+                    mem_overwrite(cur_addr, to_bits(xlen_val, caplen_bytes_v));
+                    X(reg_idx_bits) = rs1_v;
+                } else {
+                    X(reg_idx_bits) = capstone_load_mem(cur_addr, caplen_bytes_v);
+                };
+                assert(capstone_store_mem(cur_addr, caplen_bytes_v, v_to_save));
+                reg_idx = reg_idx + 1;
+            };
+
+            /* save next PC cap */
+            assert(capstone_store_mem(start_addr, caplen_bytes_v, CapVal(next_pc_cap)));
+
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+
+}
