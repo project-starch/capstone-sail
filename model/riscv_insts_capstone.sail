@@ -150,6 +150,52 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPPRINT)) = {
 mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPPRINT)
   <-> "capprint" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGGET)   <-> 0b0001100 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGGET)) = {
+    let rs1_v : regtype = X(rs1);
+    let rd_v : regtype = X(rd);
+
+    match(rs1_v) {
+        RawVal(v) => {
+            reg_overwrite(rd_v);
+            X(rd) = EXTZ(mem_tag(v));
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_TAGGET)
+  <-> "tagget" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGSET)   <-> 0b0001011 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGSET)) = {
+    let rs1_v : regtype = X(rs1);
+    let rs2_v : regtype = X(rs2);
+
+    match((rs1_v, rs2_v)) {
+        (RawVal(addr), RawVal(tag)) => {
+            assert(mem_tag_set(addr, bit_to_bits(tag[0])));
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_TAGSET)
+  <-> "tagset" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
