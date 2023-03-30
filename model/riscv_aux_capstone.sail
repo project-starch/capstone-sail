@@ -59,11 +59,15 @@ function redirect_to_cap(c: cap_t) -> unit = {
     nextPC = cursor;
 }
 
+function get_next_pc_cap() -> cap_t = {
+    cap_set_cursor(PCCap, nextPC)
+}
+
 /* memory-access related */
 
 function cap_access_allowed(c: cap_t, width: int, req_perm: capperm_t) -> bool = {
     let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(c) in
-    unsigned(cursor) >= unsigned(start_addr) & unsigned(cursor) + width <= unsigned(end_addr) &
+        cap_in_bound(c, cap_cursor(c), width) &
         req_perm <=_p perm & captype_grants_access(ty, capperm_involves_write(req_perm))
 }
 
@@ -86,7 +90,7 @@ function capstone_load_mem forall 'n, 0 < 'n & 'n <= 16. (addr: xlenbits, width:
 function capstone_store_mem forall 'n, 0 < 'n & 'n <= 16. (addr: xlenbits, width: atom('n), v: regtype) -> bool = {
     match(v) {
         CapVal(c) if width == 16 => {
-            write_ram(Write_plain, addr, 16, c, ())
+            write_ram(Write_plain, addr, 16, c, ()) & mem_tag_set(addr, 0b1)
         },
         RawVal(rv) => {
             if width == 8 then {
@@ -124,3 +128,21 @@ function mem_moved(addr: xlenbits, v: regtype) -> bool = {
         }
     }
 }
+
+/* PC checks */
+function check_pc_cap(pc: xlenbits, pc_cap: cap_t) -> bool = {
+    cap_in_bound(pc_cap, pc, 4) & captype_grants_access(cap_type(pc_cap), false) &
+        CAP_PERM_RX <=_p cap_perm(pc_cap)
+}
+
+/* Capstone sysinit */
+val init_capstone : unit -> unit effect {wreg} 
+function init_capstone() = {
+    PCCap = encode_cap((EXTZ(0b0) : xlenbits,
+                        EXTZ(0b0) : xlenbits,
+                        EXTZ(0b1) : xlenbits << to_bits(xlen_val, 25),
+                        EXTZ(0b0) : capnodeidbits,
+                        CAP_PERM_RX,
+                        CAP_TYPE_LIN));
+}
+

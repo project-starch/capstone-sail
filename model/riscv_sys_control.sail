@@ -598,6 +598,8 @@ function init_sys() -> unit = {
 
   init_pmp();
 
+  init_capstone();
+
   // log compatibility with spike
   if   get_config_print_reg()
   then print_reg("CSR mstatus <- " ^ BitStr(mstatus.bits()) ^ " (input: " ^ BitStr(EXTZ(0b0) : xlenbits) ^ ")")

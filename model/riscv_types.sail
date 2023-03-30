@@ -243,6 +243,7 @@ union ExceptionType = {
  E_Load_Page_Fault    : unit,
  E_Reserved_14        : unit,
  E_SAMO_Page_Fault    : unit,
+ E_Fetch_Cap_Fault    : unit,
 
  /* extensions */
  E_Extension          : ext_exc_type
@@ -267,6 +268,7 @@ function exceptionType_to_bits(e) =
     E_Load_Page_Fault()    => 0x0d,
     E_Reserved_14()        => 0x0e,
     E_SAMO_Page_Fault()    => 0x0f,
+    E_Fetch_Cap_Fault()    => 0x10,
 
     /* extensions */
     E_Extension(e)         => ext_exc_type_to_bits(e)
@@ -291,6 +293,8 @@ function num_of_ExceptionType(e) =
     E_Load_Page_Fault()    => 13,
     E_Reserved_14()        => 14,
     E_SAMO_Page_Fault()    => 15,
+    /* for Capstone */
+    E_Fetch_Cap_Fault()      => 16,
 
     /* extensions */
     E_Extension(e)         => num_of_ext_exc_type(e)
@@ -316,6 +320,7 @@ function exceptionType_to_str(e) =
     E_Load_Page_Fault()    => "load-page-fault",
     E_Reserved_14()        => "reserved-1",
     E_SAMO_Page_Fault()    => "store/amo-page-fault",
+    E_Fetch_Cap_Fault()    => "invalid pc capability",
 
     /* extensions */
     E_Extension(e)         => ext_exc_type_to_str(e)
@@ -427,6 +432,12 @@ enum capstone_op = {
     CAPSTONE_SCC, CAPSTONE_LCC, CAPSTONE_SPLIT, CAPSTONE_SEAL,
     CAPSTONE_MOVC, CAPSTONE_MREV, CAPSTONE_JMP, CAPSTONE_JNZ,
     CAPSTONE_LWC, CAPSTONE_SWC}
+
+let capstone_context_size : int = caplen_bytes_v * 32
+
+/* indices of special registers in the calling convention */
+let capstone_reg_ret : int = 1
+let capstone_reg_arg : int = 10
 
 val sep : unit <-> string
 mapping sep : unit <-> string = {

@@ -73,10 +73,17 @@
 function isRVC(h : half) -> bool = not(h[1 .. 0] == 0b11)
 
 val fetch : unit -> FetchResult effect {escape, rmem, rmemt, rreg, wmv, wmvt, wreg}
-function fetch() -> FetchResult =
+function fetch() -> FetchResult = {
   /* fetch get_arch_pc() check for extensions: extensions return a transformed get_arch_pc() to fetch,
    * but any exceptions use the untransformed get_arch_pc().
    */
+
+
+  /* testing only */
+  if not(check_pc_cap(get_arch_pc(), PCCap)) then {
+    print_cap("PCCap (invalid)", PCCap);
+    F_Error(E_Fetch_Cap_Fault(), get_arch_pc())
+  } else
   match ext_fetch_check_pc(get_arch_pc(), get_arch_pc()) {
     Ext_FetchAddr_Error(e)   => F_Ext_Error(e),
     Ext_FetchAddr_OK(use_pc) => {
@@ -118,3 +125,4 @@ function fetch() -> FetchResult =
       }
     }
   }
+}

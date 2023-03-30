@@ -19,6 +19,14 @@ mapping capperm_bits : capperm_t <-> cappermbits = {
     CAP_PERM_RWX <-> 0b100
 }
 
+mapping capperm_string : capperm_t <-> string = {
+    CAP_PERM_NA <-> "no access",
+    CAP_PERM_RO <-> "read-only",
+    CAP_PERM_RX <-> "read-execute",
+    CAP_PERM_RW <-> "read-write",
+    CAP_PERM_RWX <-> "read-write-execute"
+}
+
 infix 4 <=_p
 function operator <=_p (perm_a : capperm_t, perm_b : capperm_t) -> bool = {
     match((perm_a, perm_b)) {
@@ -48,6 +56,14 @@ enum captype_t = {
 type captypelen : Int = 3
 type captypebits = bits(captypelen)
 
+mapping captype_string : captype_t <-> string = {
+    CAP_TYPE_LIN <-> "linear",
+    CAP_TYPE_NONLIN <-> "non-linear",
+    CAP_TYPE_REV <-> "revocation",
+    CAP_TYPE_UNINIT <-> "uninitialised",
+    CAP_TYPE_SEALED <-> "sealed",
+    CAP_TYPE_SEALEDRET <-> "sealed-return"
+}
 
 mapping captype_bits : captype_t <-> captypebits = {
     CAP_TYPE_LIN <->     0b000,
@@ -66,6 +82,10 @@ function captype_grants_access(ty: captype_t, is_write: bool) -> bool = {
 /* does the capability type not allow duplicating? */
 function captype_is_linear(ty: captype_t) -> bool = {
     ty != CAP_TYPE_NONLIN
+}
+
+function captype_is_sealed(ty: captype_t) -> bool = {
+    ty == CAP_TYPE_SEALED | ty == CAP_TYPE_SEALEDRET
 }
 
 type capnodeidlen : Int = 31
@@ -205,7 +225,8 @@ function cap_set_perm(cap: cap_t, new_perm: capperm_t) -> cap_t = {
 
 function cap_set_bound(cap: cap_t, new_start: xlenbits, new_end: xlenbits) -> cap_t = {
     let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(cap) in
-        encode_cap((cursor, new_start, new_end, ni, perm, ty))
+        /* encode_cap((cursor, new_start, new_end, ni, perm, ty)) */
+        encode_cap((new_start, new_start, new_end, ni, perm, ty))
 }
 
 function cap_set_cursor(cap: cap_t, new_cursor: xlenbits) -> cap_t = {
@@ -242,10 +263,58 @@ function cap_type(cap: cap_t) -> captype_t = {
     let (_, _, _, _, _, ty) = decode_cap(cap) in ty
 }
 
+function cap_perm(cap: cap_t) -> capperm_t = {
+    let (_, _, _, _, perm, _) = decode_cap(cap) in perm
+}
+
 function cap_cursor(cap: cap_t) -> xlenbits = {
     let (cursor, _, _, _, _, _) = decode_cap(cap) in cursor
 }
 
 function cap_nodeid(cap: cap_t) -> capnodeidbits = {
     let (_, _, _, nid, _, _) = decode_cap(cap) in nid
+}
+
+function cap_bounds(cap: cap_t) -> (xlenbits, xlenbits) = {
+    let (_, start_addr, end_addr, _, _, _) = decode_cap(cap) in
+        (start_addr, end_addr)
+}
+
+function cap_bound_size(cap: cap_t) -> xlenbits = {
+    let (_, start_addr, end_addr, _, _, _) = decode_cap(cap) in
+        end_addr - start_addr
+}
+
+function cap_in_bound(cap: cap_t, addr: xlenbits, width: int) -> bool = {
+    let (_, start_addr, end_addr, _, _, _) = decode_cap(cap) in
+        unsigned(addr) >= unsigned(start_addr) & unsigned(addr) + width <= unsigned(end_addr)
+}
+
+
+/* capability-related errors */
+
+enum caperror_t = {
+    CAP_ERROR_INVALID_PC
+}
+
+/* pretty-print capability */
+
+function print_cap(s: string, cap: cap_t) -> unit = {
+    /* print out bounds for now */
+    let (_, start_addr, end_addr, _, perm, ty) = decode_cap(cap);
+    print_string("Print Cap ", s);
+    print_string("Type = ", captype_string(ty));
+    print_string("Perm = ", capperm_string(perm));
+    print_bits("Start address = ", start_addr);
+    print_bits("End address = ", end_addr);
+}
+
+function cap_string(cap: cap_t) -> string = {
+    let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(cap) in
+        "Cap(" ^ BitStr(cursor) ^ sep() ^
+        BitStr(start_addr) ^ sep() ^
+        BitStr(end_addr) ^ sep() ^
+        BitStr(ni) ^ sep() ^
+        capperm_string(perm) ^ sep() ^
+        captype_string(ty) ^ ")"
 }

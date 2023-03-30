@@ -117,5 +117,14 @@ function reg_to_xlenbits(reg: regtype) -> xlenbits = {
 let zero_reg : regtype = RawVal(EXTZ(0b0))
 
 /* default register printer */
-function RegStr(r : regtype) -> string = BitStr(reg_bits(r))
+function RegStr(r : regtype) -> string = {
+    match(r) {
+        CapVal(c) => {
+            cap_string(c)
+        },
+        RawVal(v) => {
+            BitStr(v)
+        }
+    }
+}
 
