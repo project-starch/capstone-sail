@@ -108,22 +108,16 @@ function decode_cap(cap: cap_t) -> decodedcap_t = {
     B : xlenbits = EXTZ(b);
     B = B << 3;
     E : xlenbits = EXTZ(0b0);
-    Lmsb = 0b0;
-
-    if(iE == 0b0) then {
+    Lmsb = if(iE == 0b0) then {
         T = T | EXTZ(tE);
         B = B | EXTZ(bE);
-        Lmsb = 0b0;
+        0b0
     } else {
         E = (EXTZ(tE) : xlenbits << 3) | EXTZ(bE) : xlenbits;
-        Lmsb = 0b0;
+        0b1
     };
 
-    Lcarry = 0b0;
-
-    if(unsigned(T) < unsigned(B & ((EXTZ(0b1) : xlenbits << 12) - EXTZ(0b1) : xlenbits))) then {
-        Lcarry = 0b0;
-    };
+    Lcarry = if(unsigned(T) < unsigned(B[11..0])) then 0b1 else 0b0;
 
     T = T | (((B >> 12) + (EXTZ(Lcarry) : xlenbits) + (EXTZ(Lmsb) : xlenbits)) << 12);
 
@@ -160,33 +154,32 @@ function encode_cap(dcap: decodedcap_t) -> cap_t = {
 
     assert(unsigned(end_addr) >= unsigned(start_addr), "Capability end address must not be lower than the start address.");
 
-    // TODO: complete definition
     let len : xlenbits = end_addr - start_addr;
 
     E: bits(6) = to_bits(6, 51);
-    i: int = 63;
-    while(i >= 13 & not(bit_to_bool(len[unsigned(E)]))) do {
+    i: bits(6) = to_bits(6, 63);
+    while(unsigned(i) >= 13 & not(bit_to_bool(len[unsigned(i)]))) do {
         i = i - 1;
         E = E - 1;
     };
 
     if (unsigned(E) == 0 & not(bit_to_bool(len[12]))) then {
         let iE : bits(1) = 0b0;
-        let B : xlenbits = start_addr & (EXTZ(EXTS(0b1) : bits(14)) : xlenbits);
-        let T : xlenbits = end_addr & (EXTZ(EXTS(0b1) : bits(12)) : xlenbits);
-        let bE : xlenbits = B & EXTZ(0b111) : xlenbits; 
+        let B : xlenbits = EXTZ(start_addr[13..0]);
+        let T : xlenbits = EXTZ(end_addr[11..0]);
+        let bE : xlenbits = EXTZ(B[2..0]); 
         let b : xlenbits = B >> 3;
-        let tE : xlenbits = T & EXTZ(0b111) : xlenbits;
+        let tE : xlenbits = EXTZ(T[2..0]);
         let t : xlenbits = T >> 3;
 
         ni @ captype_bits(ty) @ capperm_bits(perm) @ iE @ t[8..0] @
         tE[2..0] @ b[10..0] @ bE[2..0] @ cursor
     } else {
         let iE : bits(1) = 0b1;
-        B : xlenbits = (start_addr >> (E + 3)) & EXTZ(EXTS(0b1) : bits(11)) : xlenbits;
-        T : xlenbits = (end_addr >> (E + 3)) & EXTZ(EXTS(0b1) : bits(9)) : xlenbits;
+        B : xlenbits = EXTZ((start_addr >> (E + 3))[10..0]);
+        T : xlenbits = EXTZ((end_addr >> (E + 3))[8..0]);
         if(unsigned(end_addr) > unsigned((end_addr >> (E + 3)) << (E + 3))) then {
-            T = T + EXTZ(0xb1) : xlenbits;
+            T = T + 1;
             j : int = 1;
             while(j <= 9) do {
                 if(T == (EXTZ(0b1) : xlenbits) << to_bits(6, j)) then {
@@ -197,7 +190,7 @@ function encode_cap(dcap: decodedcap_t) -> cap_t = {
                 j = j + 1;
             };
         };
-        let bE : xlenbits = EXTZ(E) : xlenbits & EXTZ(0b111) : xlenbits;
+        let bE : xlenbits = EXTZ(E[2..0]);
         let tE : xlenbits = EXTZ(E) : xlenbits >> 3;
 
         ni @ captype_bits(ty) @ capperm_bits(perm) @ iE @ T[8..0] @
