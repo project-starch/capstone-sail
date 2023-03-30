@@ -552,6 +552,8 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JMP)) = {
         /* we don't check the permission or the type here. invalid values will trigger
         faults later */
         CapVal(c) => {
+            reg_overwrite(CapVal(PCCap));
+            X(rs1) = reg_moved(rs1_v);
             redirect_to_cap(c);
             RETIRE_SUCCESS
         },
@@ -577,6 +579,8 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JNZ)) = {
     match((rs1_v, rs2_v)) {
         (CapVal(c), RawVal(v)) => {
             if(v != EXTZ(0b0)) then {
+                reg_overwrite(CapVal(PCCap));
+                X(rs1) = reg_moved(rs1_v);
                 redirect_to_cap(c);
             };
             RETIRE_SUCCESS
