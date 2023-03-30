@@ -294,24 +294,18 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)) = {
                 let cur_addr = start_addr + to_bits(xlen_val, reg_idx * caplen_bytes_v);
                 let reg_idx_bits = to_bits(5, reg_idx);
                 /* swap the register value */
-                let v_to_save : regtype = match(reg_idx) {
-                    rs1 => rs1_v_moved,
-                    rd => rd_v_moved,
-                    _ => X(reg_idx_bits)
-                };
-                match(reg_idx) {
-                    capstone_reg_ret => {
-                        /* the original value at the memory location is hence destroyed */
-                        mem_overwrite(cur_addr, to_bits(xlen_val, caplen_bytes_v));
-                        X(reg_idx_bits) = rd_v; /* TODO: change the type to sealed-ret */
-                    },
-                    capstone_reg_arg => {
-                        mem_overwrite(cur_addr, to_bits(xlen_val, caplen_bytes_v));
-                        X(reg_idx_bits) = rs1_v;
-                    },
-                    _ => {
-                        X(reg_idx_bits) = capstone_load_mem(cur_addr, caplen_bytes_v);
-                    }
+                let v_to_save : regtype = if reg_idx_bits == rs1 then rs1_v_moved
+                    else if reg_idx_bits == rd then rd_v_moved
+                    else X(reg_idx_bits);
+                if reg_idx == capstone_reg_ret then {
+                    /* the original value at the memory location is hence destroyed */
+                    mem_overwrite(cur_addr, to_bits(xlen_val, caplen_bytes_v));
+                    X(reg_idx_bits) = rd_v; /* TODO: change the type to sealed-ret */
+                } else if reg_idx == capstone_reg_arg then {
+                    mem_overwrite(cur_addr, to_bits(xlen_val, caplen_bytes_v));
+                    X(reg_idx_bits) = rs1_v;
+                } else {
+                    X(reg_idx_bits) = capstone_load_mem(cur_addr, caplen_bytes_v);
                 };
                 assert(capstone_store_mem(cur_addr, caplen_bytes_v, v_to_save));
                 reg_idx = reg_idx + 1;

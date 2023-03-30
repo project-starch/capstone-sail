@@ -93,8 +93,10 @@ function capstone_store_mem forall 'n, 0 < 'n & 'n <= 16. (addr: xlenbits, width
             write_ram(Write_plain, addr, 16, c, ()) & mem_tag_set(addr, 0b1)
         },
         RawVal(rv) => {
-            if width == 8 then {
-                write_ram(Write_plain, addr, width, rv[63..0], ())
+            if width == 16 | width == 8 then {
+                /* here we still store 8 bytes only even if the requested
+                data width is 16 bytes */
+                write_ram(Write_plain, addr, 8, rv[63..0], ())
             } else if width == 4 then {
                 write_ram(Write_plain, addr, width, rv[31..0], ())
             } else if width == 2 then {
