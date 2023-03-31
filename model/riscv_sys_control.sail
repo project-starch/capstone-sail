@@ -548,12 +548,19 @@ function handle_interrupt(i : InterruptType, del_priv : Privilege) -> unit =
 /* Capstone sysinit */
 val init_capstone : unit -> unit effect {wreg} 
 function init_capstone() = {
-    PCCap = encode_cap((EXTZ(0b0) : xlenbits,
-                        EXTZ(0b0) : xlenbits,
-                        EXTZ(0b1) : xlenbits << to_bits(xlen_val, xlen_val - 1),
-                        EXTZ(0b0) : capnodeidbits,
-                        CAP_PERM_RX,
-                        CAP_TYPE_LIN));
+    match(capnode_duplicate(capnode_id_invalid, true)) {
+      Some(new_node_id) => {
+        PCCap = encode_cap((EXTZ(0b0) : xlenbits,
+                            EXTZ(0b0) : xlenbits,
+                            EXTZ(0b1) : xlenbits << to_bits(xlen_val, xlen_val - 1),
+                            new_node_id,
+                            CAP_PERM_RX,
+                            CAP_TYPE_LIN));
+      },
+      None() => {
+        assert(false, "Unable to allocate node for initial PC capability");
+      }
+    };
 }
 
 /* state state initialization */

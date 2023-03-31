@@ -651,9 +651,10 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWC)) = {
     let rd_v : regtype = X(rd);
     
     match(rs1_v) {
-        CapVal(c) if cap_access_allowed(c, 16, CAP_PERM_RO) => {
+        CapVal(c) if cap_access_allowed(c, 16, CAP_PERM_RO) &
+            capnode_query(cap_nodeid(c)) == 0b1 => {
             /* load data and tag */
-            let addr = cap_cursor(c); /* TODO: add node query */
+            let addr = cap_cursor(c); 
             let v = capstone_load_mem(addr, 16);
             match(v) {
                 CapVal(loaded_c) => {
@@ -688,9 +689,10 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWS)) = {
     
     match(rs1_v) {
         /* load only 8 bytes as here we only load raw data */
-        CapVal(c) if cap_access_allowed(c, 8, CAP_PERM_RO) => {
+        CapVal(c) if cap_access_allowed(c, 8, CAP_PERM_RO) &
+                capnode_query(cap_nodeid(c)) == 0b1 => {
             /* load data and tag */
-            let addr = cap_cursor(c); /* TODO: add node query */
+            let addr = cap_cursor(c);
             let v = capstone_load_mem(addr, 8);
             reg_overwrite(rd_v);
             X(rd) = v;
@@ -717,7 +719,8 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SWC)) = {
     let rd_v : regtype = X(rd);
 
     match(rd_v) {
-        CapVal(c) if cap_access_allowed(c, 16, CAP_PERM_RW) => {
+        CapVal(c) if cap_access_allowed(c, 16, CAP_PERM_RW)
+                & capnode_query(cap_nodeid(c)) == 0b1 => {
             let addr = cap_cursor(c);
             mem_overwrite(addr, to_bits(xlen_val, 16));
             assert(capstone_store_mem(addr, 16, rs1_v));
