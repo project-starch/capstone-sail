@@ -506,3 +506,12 @@ function report_invalid_width(f , l, w, k) -> 'a = {
     ^ string_of_int(sizeof(xlen)));
   throw Error_internal_error()
 }
+
+
+/* Consider moving this elsewhere */
+/* Normal/secure memory partitioning */
+val sec_mem_base = {ocaml: "Platform.sec_mem_base"} : unit -> xlenbits
+/* Revocation node memory base */
+val rnode_mem_base = {ocaml: "Platform.rnode_mem_base"} : unit -> xlenbits
+/* Tag memory base */
+val tag_mem_base   = {ocaml: "Platform.tag_mem_base"} : unit -> xlenbits

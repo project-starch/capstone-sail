@@ -78,9 +78,8 @@ function fetch() -> FetchResult = {
    * but any exceptions use the untransformed get_arch_pc().
    */
 
-
   /* testing only */
-  if not(check_pc_cap(get_arch_pc(), PCCap)) then {
+  if mmode == CAPSTONE_MODE_SECURE & not(check_pc_cap(get_arch_pc(), PCCap)) then {
     print_cap("PCCap (invalid)", PCCap);
     F_Error(E_Fetch_Cap_Fault(), get_arch_pc())
   } else

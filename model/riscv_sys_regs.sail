@@ -138,6 +138,14 @@ bitfield Misa : xlenbits = {
 }
 register misa : Misa
 
+enum capstone_exec_mode = {
+  CAPSTONE_MODE_NORMAL,
+  CAPSTONE_MODE_SECURE
+}
+
+register mmode : capstone_exec_mode
+
+
 /* whether misa is R/W */
 val sys_enable_writable_misa = {c: "sys_enable_writable_misa", ocaml: "Platform.enable_writable_misa", _: "sys_enable_writable_misa"} : unit -> bool
 /* whether misa.c was enabled at boot */

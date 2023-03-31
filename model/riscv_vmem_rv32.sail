@@ -96,7 +96,27 @@ function translationMode(priv) = {
 
 val translateAddr_priv : (xlenbits, AccessType(ext_access_type), Privilege) -> TR_Result(xlenbits, ExceptionType) effect {escape, rmem, rmemt, rreg, wmv, wmvt, wreg}
 function translateAddr_priv(vAddr, ac, effPriv) = {
-  TR_Address(vAddr, init_ext_ptw)
+  if mmode == CAPSTONE_MODE_SECURE then
+    TR_Address(vAddr, init_ext_ptw)
+  else {
+    let mxr    : bool   = mstatus.MXR() == 0b1;
+    let do_sum : bool   = mstatus.SUM() == 0b1;
+    let mode : SATPMode = translationMode(effPriv);
+
+    let asid = curAsid32(satp);
+    let ptb  = curPTB32(satp);
+
+    /* PTW extensions: initialize the PTW extension state */
+    let ext_ptw : ext_ptw = init_ext_ptw;
+    match mode {
+      Sbare => TR_Address(vAddr, ext_ptw),
+      Sv32  => match translate32(asid, ptb, vAddr, ac, effPriv, mxr, do_sum, SV32_LEVELS - 1, ext_ptw) {
+                TR_Address(pa, ext_ptw) => TR_Address(to_phys_addr(pa), ext_ptw),
+                TR_Failure(f, ext_ptw)  => TR_Failure(translationException(ac, f), ext_ptw)
+              },
+      _     => internal_error("unsupported address translation scheme")
+    }
+  }
 }
 
 val translateAddr : (xlenbits, AccessType(ext_access_type)) -> TR_Result(xlenbits, ExceptionType) effect {escape, rmem, rmemt, rreg, wmv, wmvt, wreg}

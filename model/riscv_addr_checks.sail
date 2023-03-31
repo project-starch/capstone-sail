@@ -135,3 +135,14 @@ function ext_check_phys_mem_read (access_type, paddr, size, aquire, release, res
 
 function ext_check_phys_mem_write(write_kind, paddr, size, data, metadata) =
   Ext_PhysAddr_OK ()
+
+
+/* check that the physical address falls within the permitted partition */
+function check_phys_addr_in_partition(addr: xlenbits, through_mmu: bool) -> bool = {
+  match(mmode, through_mmu) {
+    (CAPSTONE_MODE_NORMAL, true) => unsigned(addr) < unsigned(sec_mem_base()),
+    (_, false) => unsigned(addr) >= unsigned(sec_mem_base()) &
+                                     unsigned(addr) < unsigned(rnode_mem_base()),
+    _ => false
+  }
+}

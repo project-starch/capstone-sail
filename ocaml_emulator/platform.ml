@@ -93,6 +93,11 @@ let dram_size ()  = arch_bits_of_int64 !P.dram_size_ref
 let clint_base () = arch_bits_of_int64 P.clint_base
 let clint_size () = arch_bits_of_int64 P.clint_size
 
+(* Capstone-related *)
+let sec_mem_base ()   = arch_bits_of_int64 P.sec_mem_base
+let rnode_mem_base () = arch_bits_of_int64 P.rnode_mem_base
+let tag_mem_base ()   = arch_bits_of_int64 P.tag_mem_base
+
 let insns_per_tick () = Big_int.of_int P.insns_per_tick
 
 let htif_tohost () =

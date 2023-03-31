@@ -55,6 +55,13 @@ let clint_base = 0x02000000L;;  (* Spike::CLINT_BASE *)
 let clint_size = 0x000c0000L;;  (* Spike::CLINT_SIZE *)
 let rom_base   = 0x00001000L;;  (* Spike::DEFAULT_RSTVEC *)
 
+
+(* Capstone-related *)
+(* TODO: adjust these values later *)
+let sec_mem_base     = 0x100000000L;; (* base address of the secure memory *)
+let rnode_mem_base   = 0xffffffff00000000L;; (* base address of the revocation node memory *)
+let tag_mem_base     = 0xffffffffff000000L;; (* base address of the tag memory *)
+
 let dram_size_ref = ref (Int64.(shift_left 64L 20))
 
 type mem_region = {

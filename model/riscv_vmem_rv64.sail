@@ -118,7 +118,38 @@ function translationMode(priv) = {
 /* Capstone does not perform address translation */
 val translateAddr_priv : (xlenbits, AccessType(ext_access_type), Privilege) -> TR_Result(xlenbits, ExceptionType) effect {escape, rmem, rmemt, rreg, wmv, wmvt, wreg}
 function translateAddr_priv(vAddr, ac, effPriv) = {
-  TR_Address(vAddr, init_ext_ptw)
+  if mmode == CAPSTONE_MODE_SECURE then
+    TR_Address(vAddr, init_ext_ptw)
+  else {
+    let mxr    : bool   = mstatus.MXR() == 0b1;
+    let do_sum : bool   = mstatus.SUM() == 0b1;
+    let mode : SATPMode = translationMode(effPriv);
+
+    let asid = curAsid64(satp);
+    let ptb  = curPTB64(satp);
+
+    /* PTW extensions: initialize the PTW extension state. */
+    let ext_ptw : ext_ptw = init_ext_ptw;
+
+    match mode {
+      Sbare => TR_Address(vAddr, ext_ptw),
+      Sv39  => { if   isValidSv39Addr(vAddr)
+                then match translate39(asid, ptb, vAddr[38 .. 0], ac, effPriv, mxr, do_sum, SV39_LEVELS - 1, ext_ptw) {
+                        TR_Address(pa, ext_ptw) => TR_Address(EXTZ(pa), ext_ptw),
+                        TR_Failure(f, ext_ptw)  => TR_Failure(translationException(ac, f), ext_ptw)
+                      }
+                else TR_Failure(translationException(ac, PTW_Invalid_Addr()), ext_ptw)
+              },
+      Sv48  => { if   isValidSv48Addr(vAddr)
+                then match translate48(asid, ptb, vAddr[47 .. 0], ac, effPriv, mxr, do_sum, SV48_LEVELS - 1, ext_ptw) {
+                        TR_Address(pa, ext_ptw) => TR_Address(EXTZ(pa), ext_ptw),
+                        TR_Failure(f, ext_ptw)  => TR_Failure(translationException(ac, f), ext_ptw)
+                      }
+                else TR_Failure(translationException(ac, PTW_Invalid_Addr()), ext_ptw)
+              },
+      _     => internal_error(__FILE__, __LINE__, "unsupported address translation scheme")
+    }
+  }
 }
 
 val translateAddr : (xlenbits, AccessType(ext_access_type)) -> TR_Result(xlenbits, ExceptionType) effect {escape, rmem, rmemt, rreg, wmv, wmvt, wreg}

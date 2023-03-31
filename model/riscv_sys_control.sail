@@ -68,7 +68,6 @@
 
 /* Machine-mode and supervisor-mode functionality. */
 
-
 /* CSR access control */
 
 function csrAccess(csr : csreg) -> csrRW = csr[11..10]
@@ -548,6 +547,7 @@ function handle_interrupt(i : InterruptType, del_priv : Privilege) -> unit =
 /* Capstone sysinit */
 val init_capstone : unit -> unit effect {wreg} 
 function init_capstone() = {
+    print_bits("Revocation node mem base = ", rnode_mem_base());
     match(capnode_duplicate(capnode_id_invalid, true)) {
       Some(new_node_id) => {
         PCCap = encode_cap((EXTZ(0b0) : xlenbits,
@@ -561,6 +561,7 @@ function init_capstone() = {
         assert(false, "Unable to allocate node for initial PC capability");
       }
     };
+    mmode = CAPSTONE_MODE_NORMAL; /* initially the CPU runs in the normal world */
 }
 
 /* state state initialization */

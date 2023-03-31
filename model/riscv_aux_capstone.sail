@@ -119,7 +119,8 @@ function mem_moved(addr: xlenbits, v: regtype) -> bool = {
 /* PC checks */
 function check_pc_cap(pc: xlenbits, pc_cap: cap_t) -> bool = {
     cap_in_bound(pc_cap, pc, 4) & captype_grants_access(cap_type(pc_cap), false) &
-        CAP_PERM_RX <=_p cap_perm(pc_cap) & capnode_query(cap_nodeid(pc_cap)) == 0b1
+        CAP_PERM_RX <=_p cap_perm(pc_cap) & capnode_query(cap_nodeid(pc_cap)) == 0b1 &
+        check_phys_addr_in_partition(pc, false)
 }
 
 
