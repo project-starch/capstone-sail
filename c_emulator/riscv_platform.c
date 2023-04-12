@@ -10,19 +10,19 @@ static mach_bits reservation = 0;
 static bool reservation_valid = false;
 
 
-uint64_t sec_mem_base() {
+mach_bits sec_mem_base(unit u) {
   return 0x100000000ULL;
 }
 
-uint64_t sec_mem_end() {
+mach_bits sec_mem_end(unit u) {
   return 0x200000000ULL;
 }
 
-uint64_t rnode_mem_base() {
+mach_bits rnode_mem_base(unit u) {
   return 0xffffffff00000000ULL;
 } 
 
-uint64_t tag_mem_base() {
+mach_bits tag_mem_base(unit u) {
   return 0xffffffffff000000ULL;
 }
 

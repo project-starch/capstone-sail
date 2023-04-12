@@ -22,7 +22,7 @@ CC=riscv64-unknown-elf-gcc
 OCAML_SIM=../ocaml_emulator/riscv_ocaml_sim_RV64
 C_SIM=../c_emulator/riscv_sim_RV64
 
-.PHONY: all clean run-c run-ocaml $(RUN_C) $(RUN_OCAML)
+.PHONY: all clean run-c run-ocaml $(RUN_C) $(RUN_OCAML) list
 
 all: $(TARGETS)
 
@@ -42,3 +42,7 @@ $(TARGETS):build/%:$(TESTSUITE_SOURCE_PATH)/%.S
 
 clean:
 	rm -rf build
+
+list:
+	@echo "Included test cases:"
+	@$(foreach testcase,$(patsubst build/%,%,$(TARGETS)),echo "  $(testcase)";)
