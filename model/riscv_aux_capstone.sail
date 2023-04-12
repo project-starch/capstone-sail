@@ -141,6 +141,7 @@ function get_next_pc_cap() -> cap_t = {
 
 /* implementation for call, return, and retseal instructions */
 /* TODO: do something different for return and retseal */
+/* TODO: might need to do something about normal_npc and normal_sp */
 function capstone_call(rd: bits(5), rs1: bits(5), calltype: capstone_calltype) -> Retired = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
@@ -148,7 +149,11 @@ function capstone_call(rd: bits(5), rs1: bits(5), calltype: capstone_calltype) -
     let rd_v_moved = reg_moved(rd_v);
     let rs1_v_moved = reg_moved(rs1_v);
 
-    if(rs1 == rd) then {
+
+    if calltype == CAPSTONE_CALL_CAPEXIT then {
+        /* no need to do anything for capexit */
+        RETIRE_SUCCESS
+    } else if(rs1 == rd) then {
         /* we do not allow the two operands to be the same */
         handle_illegal();
         RETIRE_FAIL
@@ -170,6 +175,9 @@ function capstone_call(rd: bits(5), rs1: bits(5), calltype: capstone_calltype) -
                 }
             };
 
+            /* TODO: for capenter and capexit, do we save the context? */
+            /* TODO: actually, for secure world domain switches, there might also be some more
+            clever interface designs which allow the caller to perform register save by itself */
             reg_idx : int = 1;
             while reg_idx < 32 do {
                 let cur_addr = start_addr + to_bits(xlen_val, reg_idx * caplen_bytes_v);
@@ -203,4 +211,18 @@ function capstone_call(rd: bits(5), rs1: bits(5), calltype: capstone_calltype) -
         }
     }
 
+}
+
+function capstone_gen_genesis() -> cap_t = {
+    match(capnode_alloc()) {
+        Some(node_id) => {
+            encode_cap((sec_mem_base(),
+                sec_mem_base(), sec_mem_end(), node_id, CAP_PERM_RWX, CAP_TYPE_LIN));
+        },
+        None() => {
+            assert(false, "cannot allocate a node for genesis capability");
+            encode_cap((EXTZ(0b0), EXTZ(0b0), EXTZ(0b0), 
+                capnode_id_invalid, CAP_PERM_NA, CAP_TYPE_LIN))
+        }
+    };
 }

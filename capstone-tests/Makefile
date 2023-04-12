@@ -1,6 +1,14 @@
 SHELL:=/bin/bash
 
+# by default, TransCapstone is disabled
+TRANSCAPSTONE_ENABLED?=0
+
+ifeq ($(TRANSCAPSTONE_ENABLED),0)
 TESTSUITE_SOURCE_PATH=./testsuite/capstone
+else
+TESTSUITE_SOURCE_PATH=./testsuite/transcapstone
+endif
+
 PREAMBLE_FILE=./preamble.S
 EPILOGUE_FILE=./epilogue.S
 TRANSFORM_CMD=gawk -f ./transform-testcase.awk

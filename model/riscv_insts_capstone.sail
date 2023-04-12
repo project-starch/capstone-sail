@@ -740,27 +740,35 @@ mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_SWC)
 /************************************************************/
 
 /* TODO: details of capenter and capexit require etching out*/
+
+/* capenter does the following
+   1. check if the operand contains a sealed capability
+   2. store the stack top address and PC in special registers
+   3. unseal capability and swap in the context (similar to call)
+   4. set the CPU mode to the secure world
+Note that capenter does not store the full calling context. It is the
+responsibility of the caller to store the calling context
+*/
+
 mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)   <-> 0b0011100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
-    let rs1_v : regtype = X(rs1);
+    let cur_npc = nextPC; /* PC address for resuming execution */
+    let cur_sp = x2; /* current stack pointer */
 
-    RETIRE_SUCCESS
+    if mmode != CAPSTONE_MODE_NORMAL | capstone_call(rd, rs1, CAPSTONE_CALL_CAPENTER) != RETIRE_SUCCESS
+    then {
+        handle_illegal();
+        RETIRE_FAIL
+    } else {
+        /* store the PC and stack pointer in special registers */
+        normal_npc = cur_npc;
+        normal_sp = cur_sp;
+        /* set the CPU mode to secure world */
+        mmode = CAPSTONE_MODE_SECURE;
 
-    // match(rs1_v) {
-    //     (CAPSTONE_MODE_NORMAL, CapVal(c)) if cap_access_allowed(c, 16, CAP_PERM_RW)
-    //             & capnode_query(cap_nodeid(c)) == 0b1 => {
-    //         let addr = cap_cursor(c);
-    //         mem_overwrite(addr, to_bits(xlen_val, 16));
-    //         assert(capstone_store_mem(addr, 16, rs1_v));
-    //         X(rs1) = reg_moved(rs1_v);
-    //         RETIRE_SUCCESS
-    //     },
-    //     _ => {
-    //         handle_illegal();
-    //         RETIRE_FAIL
-    //     }
-    // }
+        RETIRE_SUCCESS
+    }
 }
 
 mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPENTER)
@@ -769,28 +777,57 @@ mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPENTER)
 
 /************************************************************/
 
+/* capexit does the following
+  1. recover the PC and stack top from the special registers
+  2. (optional) seal the current context
+  3. switch the CPU mode to the normal world
+
+  Note that the capexit instruction does not restore the full context.
+*/
+
 mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)   <-> 0b0011101 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
-    let rs1_v : regtype = X(rs1);
+    if mmode != CAPSTONE_MODE_SECURE | capstone_call(rd, rs1, CAPSTONE_CALL_CAPEXIT) != RETIRE_SUCCESS then {
+        handle_illegal();
+        RETIRE_FAIL
+    } else {
+        /* recover the PC and stack pointer from the special registers */
+        nextPC = normal_npc;
+        x2 = normal_sp;
+        /* set the CPU mode to normal world */
+        mmode = CAPSTONE_MODE_NORMAL;
 
-    RETIRE_SUCCESS
-
-    // match(mmode, rd_v) {
-    //     (CAPSTONE_MODE_SECURE, CapVal(c)) if cap_access_allowed(c, 16, CAP_PERM_RW)
-    //             & capnode_query(cap_nodeid(c)) == 0b1 => {
-    //         let addr = cap_cursor(c);
-    //         mem_overwrite(addr, to_bits(xlen_val, 16));
-    //         assert(capstone_store_mem(addr, 16, rs1_v));
-    //         X(rs1) = reg_moved(rs1_v);
-    //         RETIRE_SUCCESS
-    //     },
-    //     _ => {
-    //         handle_illegal();
-    //         RETIRE_FAIL
-    //     }
-    // }
+        RETIRE_SUCCESS
+    }
 }
 
 mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPEXIT)
   <-> "capexit" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+/* capget generates the genesis capability for the whole secure memory */
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPGET)   <-> 0b0011110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPGET)) = {
+    let rd_v : regtype = X(rd);
+
+    if mmode != CAPSTONE_MODE_NORMAL & not(capget_executed) then {
+        handle_illegal();
+        RETIRE_FAIL
+    } else {
+        /* create the genesis capability based on platform configurations of the memory regions */
+        /* see riscv_types.sail */
+        let genesis_cap = capstone_gen_genesis();
+        reg_overwrite(rd_v);
+        X(rd) = CapVal(genesis_cap);
+        
+        RETIRE_SUCCESS
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPGET)
+  <-> "capget" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+

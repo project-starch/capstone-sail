@@ -59,6 +59,7 @@ let rom_base   = 0x00001000L;;  (* Spike::DEFAULT_RSTVEC *)
 (* Capstone-related *)
 (* TODO: adjust these values later *)
 let sec_mem_base     = 0x100000000L;; (* base address of the secure memory *)
+let sec_mem_end      = 0x200000000L;; (* end address of the secure memory *)
 let rnode_mem_base   = 0xffffffff00000000L;; (* base address of the revocation node memory *)
 let tag_mem_base     = 0xffffffffff000000L;; (* base address of the tag memory *)
 

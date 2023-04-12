@@ -14,6 +14,10 @@ uint64_t sec_mem_base() {
   return 0x100000000ULL;
 }
 
+uint64_t sec_mem_end() {
+  return 0x200000000ULL;
+}
+
 uint64_t rnode_mem_base() {
   return 0xffffffff00000000ULL;
 } 

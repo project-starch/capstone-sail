@@ -113,6 +113,11 @@ register x29 : regtype
 register x30 : regtype
 register x31 : regtype
 
+
+/* registers for normal world PC and stack pointer */
+register normal_npc : xlenbits
+register normal_sp  : regtype
+
 val rX : forall 'n, 0 <= 'n < 32. regno('n) -> regtype effect {rreg, escape}
 function rX r = {
   let v : regtype =

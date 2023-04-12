@@ -144,6 +144,8 @@ enum capstone_exec_mode = {
 }
 
 register mmode : capstone_exec_mode
+register capget_executed : bool /* indicates whether capget has already been executed */
+/* note that for now we do not have any consideration for multi-core yet */
 
 
 /* whether misa is R/W */

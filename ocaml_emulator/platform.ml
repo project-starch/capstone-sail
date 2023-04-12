@@ -95,6 +95,7 @@ let clint_size () = arch_bits_of_int64 P.clint_size
 
 (* Capstone-related *)
 let sec_mem_base ()   = arch_bits_of_int64 P.sec_mem_base
+let sec_mem_top ()    = arch_bits_of_int64 P.sec_mem_top
 let rnode_mem_base () = arch_bits_of_int64 P.rnode_mem_base
 let tag_mem_base ()   = arch_bits_of_int64 P.tag_mem_base
 

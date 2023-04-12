@@ -434,11 +434,13 @@ enum capstone_op = {
     CAPSTONE_MOVC, CAPSTONE_MREV, CAPSTONE_JMP, CAPSTONE_JNZ,
     CAPSTONE_LWC, CAPSTONE_SWC, CAPSTONE_LWS,
     /* TransCapstone only */
-    CAPSTONE_CAPENTER, CAPSTONE_CAPEXIT}
+    CAPSTONE_CAPENTER, CAPSTONE_CAPEXIT, 
+    CAPSTONE_CAPGET /* instruction for obtaining the initial capability */}
 
 enum capstone_calltype = {
     CAPSTONE_CALL_NORMAL, CAPSTONE_CALL_RETURN,
-    CAPSTONE_CALL_RETSEAL
+    CAPSTONE_CALL_RETSEAL, 
+    CAPSTONE_CALL_CAPENTER, CAPSTONE_CALL_CAPEXIT
 }
 
 let capstone_context_size : int = caplen_bytes_v * 32
@@ -513,6 +515,7 @@ function report_invalid_width(f , l, w, k) -> 'a = {
 /* Consider moving this elsewhere */
 /* Normal/secure memory partitioning */
 val sec_mem_base = {ocaml: "Platform.sec_mem_base", c: "sec_mem_base"} : unit -> xlenbits
+val sec_mem_end  = {ocaml: "Platform.sec_mem_end", c: "sec_mem_end"} : unit -> xlenbits
 /* Revocation node memory base */
 val rnode_mem_base = {ocaml: "Platform.rnode_mem_base", c: "rnode_mem_base"} : unit -> xlenbits
 /* Tag memory base */
