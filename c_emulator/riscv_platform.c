@@ -9,6 +9,19 @@
 static mach_bits reservation = 0;
 static bool reservation_valid = false;
 
+
+uint64_t sec_mem_base() {
+  return 0x100000000ULL;
+}
+
+uint64_t rnode_mem_base() {
+  return 0xffffffff00000000ULL;
+} 
+
+uint64_t tag_mem_base() {
+  return 0xffffffffff000000ULL;
+}
+
 bool sys_enable_rvc(unit u)
 { return rv_enable_rvc; }
 
@@ -98,12 +111,30 @@ unit plat_term_write(mach_bits s)
   return UNIT;
 }
 
+mach_bits plat_term_read() 
+{
+  return (mach_bits)getchar();
+}
+
+unit plat_write_htif_fromhost(mach_bits s)
+{
+  if(rv_htif_fromhost)
+    *(uint64_t*)rv_htif_fromhost = s;
+  return UNIT;
+}
+
 void plat_insns_per_tick(sail_int *rop, unit u)
 { }
 
 mach_bits plat_htif_tohost(unit u)
 {
   return rv_htif_tohost;
+}
+
+
+mach_bits plat_htif_fromhost(unit u)
+{
+  return rv_htif_fromhost; // this might be zero in case fromhost is not available
 }
 
 unit memea(mach_bits len, sail_int n)

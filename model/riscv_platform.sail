@@ -128,6 +128,7 @@ val plat_clint_size = {ocaml: "Platform.clint_size", interpreter: "Platform.clin
 val plat_htif_tohost = {ocaml: "Platform.htif_tohost", c: "plat_htif_tohost", lem: "plat_htif_tohost"} : unit -> xlenbits
 function plat_htif_tohost () = to_bits(sizeof(xlen), elf_tohost ())
 // todo: fromhost
+val plat_htif_fromhost = {c: "plat_htif_fromhost"} : unit -> xlenbits
 
 val phys_mem_segments : unit -> list((xlenbits, xlenbits))
 function phys_mem_segments() =
@@ -329,6 +330,7 @@ function tick_clock() = {
 
 val plat_term_write = {ocaml: "Platform.term_write", c: "plat_term_write", lem: "plat_term_write"} : bits(8) -> unit
 val plat_term_read  = {ocaml: "Platform.term_read",  c: "plat_term_read", lem: "plat_term_read"}  : unit -> bits(8)
+val plat_write_htif_fromhost = {c: "plat_write_htif_fromhost", lem: "plat_write_htif_fromhost"} : bits(64) -> unit
 
 /* Spike's HTIF device interface, which multiplexes the above MMIO devices. */
 
@@ -339,6 +341,7 @@ bitfield htif_cmd : bits(64) = {
 }
 
 register htif_tohost : bits(64)
+register htif_fromhost : htif_cmd
 register htif_done   : bool
 register htif_exit_code : bits(64)
 
@@ -376,6 +379,12 @@ function htif_load(t, paddr, width) = {
   then    MemValue(sail_zero_extend(htif_tohost[31..0], 32))  /* FIXME: Redundant zero_extend currently required by Lem backend */
   else if width == 4 & paddr == plat_htif_tohost() + 4
   then    MemValue(sail_zero_extend(htif_tohost[63..32], 32)) /* FIXME: Redundant zero_extend currently required by Lem backend */
+  else if width == 4 & paddr == plat_htif_fromhost()
+  then    MemValue(sail_zero_extend(htif_fromhost.bits()[31..0], 32))
+  else if width == 4 & paddr == plat_htif_fromhost() + 4
+  then    MemValue(sail_zero_extend(htif_fromhost.bits()[63..32], 32))
+  else if width == 8 & paddr == plat_htif_fromhost()
+  then    MemValue(htif_fromhost.bits())
   else match t {
     Execute()  => MemException(E_Fetch_Access_Fault()),
     Read(Data) => MemException(E_Load_Access_Fault()),
@@ -389,7 +398,7 @@ function htif_store(paddr, width, data) = {
   if   get_config_print_platform()
   then print_platform("htif[" ^ BitStr(paddr) ^ "] <- " ^ BitStr(data));
   /* Store the written value so that we can ack it later. */
-  if      width == 8
+  if      width == 8 & paddr == plat_htif_tohost()
   then    { htif_cmd_write = bitone;
             htif_payload_writes = htif_payload_writes + 1;
             htif_tohost = EXTZ(data) }
@@ -405,6 +414,20 @@ function htif_store(paddr, width, data) = {
             htif_cmd_write = bitone;
             htif_tohost = vector_update_subrange(htif_tohost, 63, 32, data) }
   /* unaligned command writes are not supported and will not be detected */
+  else if width == 8 & paddr == plat_htif_fromhost()
+  then    {
+            (ref htif_fromhost).bits() = EXTZ(data);
+  }
+  else if width == 4 & paddr == plat_htif_fromhost()
+  then    {
+            (ref htif_fromhost).bits() = vector_update_subrange(htif_fromhost.bits(),
+              31, 0, data);
+  }
+  else if width == 4 & paddr == plat_htif_fromhost() + 4
+  then    {
+            (ref htif_fromhost).bits() = vector_update_subrange(htif_fromhost.bits(),
+              63, 32, data);
+  }
   else    { htif_tohost = EXTZ(data) };
 
   /* Execute if there were repeated writes of the same payload without
@@ -429,7 +452,11 @@ function htif_store(paddr, width, data) = {
         if   get_config_print_platform()
         then print_platform("htif-term cmd: " ^ BitStr(cmd.payload()));
         match cmd.cmd() {
-          0x00 => /* TODO: terminal input handling */ (),
+          0x00 => {
+            (ref htif_fromhost).payload() = EXTZ(plat_term_read()) | EXTZ(0x100);
+            (ref htif_fromhost).device() = cmd.device();
+            (ref htif_fromhost).cmd() = cmd.cmd();
+          }, /* TODO: terminal input handling */
           0x01 => plat_term_write(cmd.payload()[7..0]),
           c    => print("Unknown term cmd: " ^ BitStr(c))
         };

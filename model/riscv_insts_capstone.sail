@@ -736,3 +736,61 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SWC)) = {
 
 mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_SWC)
   <-> "swc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+/* TODO: details of capenter and capexit require etching out*/
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)   <-> 0b0011100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
+    let rs1_v : regtype = X(rs1);
+
+    RETIRE_SUCCESS
+
+    // match(rs1_v) {
+    //     (CAPSTONE_MODE_NORMAL, CapVal(c)) if cap_access_allowed(c, 16, CAP_PERM_RW)
+    //             & capnode_query(cap_nodeid(c)) == 0b1 => {
+    //         let addr = cap_cursor(c);
+    //         mem_overwrite(addr, to_bits(xlen_val, 16));
+    //         assert(capstone_store_mem(addr, 16, rs1_v));
+    //         X(rs1) = reg_moved(rs1_v);
+    //         RETIRE_SUCCESS
+    //     },
+    //     _ => {
+    //         handle_illegal();
+    //         RETIRE_FAIL
+    //     }
+    // }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPENTER)
+  <-> "capenter" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)   <-> 0b0011101 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
+    let rs1_v : regtype = X(rs1);
+
+    RETIRE_SUCCESS
+
+    // match(mmode, rd_v) {
+    //     (CAPSTONE_MODE_SECURE, CapVal(c)) if cap_access_allowed(c, 16, CAP_PERM_RW)
+    //             & capnode_query(cap_nodeid(c)) == 0b1 => {
+    //         let addr = cap_cursor(c);
+    //         mem_overwrite(addr, to_bits(xlen_val, 16));
+    //         assert(capstone_store_mem(addr, 16, rs1_v));
+    //         X(rs1) = reg_moved(rs1_v);
+    //         RETIRE_SUCCESS
+    //     },
+    //     _ => {
+    //         handle_illegal();
+    //         RETIRE_FAIL
+    //     }
+    // }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPEXIT)
+  <-> "capexit" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)

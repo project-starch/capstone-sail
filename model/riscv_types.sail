@@ -432,7 +432,9 @@ enum capstone_op = {
     CAPSTONE_TIGHTEN, CAPSTONE_DELIN,
     CAPSTONE_SCC, CAPSTONE_LCC, CAPSTONE_SPLIT, CAPSTONE_SEAL,
     CAPSTONE_MOVC, CAPSTONE_MREV, CAPSTONE_JMP, CAPSTONE_JNZ,
-    CAPSTONE_LWC, CAPSTONE_SWC, CAPSTONE_LWS}
+    CAPSTONE_LWC, CAPSTONE_SWC, CAPSTONE_LWS,
+    /* TransCapstone only */
+    CAPSTONE_CAPENTER, CAPSTONE_CAPEXIT}
 
 enum capstone_calltype = {
     CAPSTONE_CALL_NORMAL, CAPSTONE_CALL_RETURN,
@@ -510,8 +512,8 @@ function report_invalid_width(f , l, w, k) -> 'a = {
 
 /* Consider moving this elsewhere */
 /* Normal/secure memory partitioning */
-val sec_mem_base = {ocaml: "Platform.sec_mem_base"} : unit -> xlenbits
+val sec_mem_base = {ocaml: "Platform.sec_mem_base", c: "sec_mem_base"} : unit -> xlenbits
 /* Revocation node memory base */
-val rnode_mem_base = {ocaml: "Platform.rnode_mem_base"} : unit -> xlenbits
+val rnode_mem_base = {ocaml: "Platform.rnode_mem_base", c: "rnode_mem_base"} : unit -> xlenbits
 /* Tag memory base */
-val tag_mem_base   = {ocaml: "Platform.tag_mem_base"} : unit -> xlenbits
+val tag_mem_base   = {ocaml: "Platform.tag_mem_base", c: "tag_mem_base"} : unit -> xlenbits

@@ -392,8 +392,13 @@ uint64_t load_sail(char *f)
   fprintf(stdout, "ELF Entry @ 0x%" PRIx64 "\n", entry);
   /* locate htif ports */
   if (lookup_sym(f, "tohost", &rv_htif_tohost) < 0) {
+    /* tohost port is mandatory */
     fprintf(stderr, "Unable to locate htif tohost port.\n");
     exit(1);
+  }
+  if (lookup_sym(f, "fromhost", &rv_htif_fromhost) < 0) {
+    /* fromhost port is optional */
+    rv_htif_fromhost = 0;
   }
   fprintf(stderr, "tohost located at 0x%0" PRIx64 "\n", rv_htif_tohost);
   /* locate test-signature locations if any */
