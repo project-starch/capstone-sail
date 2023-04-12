@@ -11,7 +11,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPCREATE)) = {
     RETIRE_SUCCESS
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPCREATE)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPCREATE)
   <-> "capcreate" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -36,7 +36,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPTYPE)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPTYPE)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPTYPE)
   <-> "captype" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -60,7 +60,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPNODE)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPNODE)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPNODE)
   <-> "capnode" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -84,7 +84,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPPERM)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPPERM)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPPERM)
   <-> "capperm" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -109,7 +109,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPBOUND)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPBOUND)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPBOUND)
   <-> "capbound" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -133,7 +133,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPBOUND)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPBOUND)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPBOUND)
   <-> "capbound" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -147,7 +147,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPPRINT)) = {
     RETIRE_SUCCESS
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPPRINT)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPPRINT)
   <-> "capprint" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -171,7 +171,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGGET)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_TAGGET)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGGET)
   <-> "tagget" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -194,7 +194,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGSET)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_TAGSET)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGSET)
   <-> "tagset" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -216,7 +216,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_QUERY)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)
   <-> "query" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -242,7 +242,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RCUPDATE)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_RCUPDATE)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RCUPDATE)
   <-> "rcupdate" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -277,7 +277,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_ALLOC)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_ALLOC)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_ALLOC)
   <-> "alloc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -291,7 +291,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)) = {
     RETIRE_SUCCESS
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_DROP)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)
   <-> "drop" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -300,7 +300,7 @@ mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)   <-> 0b00000
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)) = capstone_call(rd, rs1, CAPSTONE_CALL_NORMAL)
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CALL)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)
   <-> "call" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -310,7 +310,7 @@ mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RETURN)   <-> 0b001
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RETURN)) = capstone_call(rd, rs1, CAPSTONE_CALL_RETURN)
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_RETURN)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RETURN)
   <-> "return" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -343,7 +343,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHRINK)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_SHRINK)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHRINK)
   <-> "shrink" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -373,7 +373,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TIGHTEN)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_TIGHTEN)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TIGHTEN)
   <-> "tighten" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -394,7 +394,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DELIN)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_DELIN)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DELIN)
   <-> "delin" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -417,7 +417,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SCC)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_SCC)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SCC)
   <-> "scc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -440,7 +440,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LCC)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_LCC)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LCC)
   <-> "lcc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -484,7 +484,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SPLIT)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_SPLIT)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SPLIT)
   <-> "split" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -505,7 +505,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SEAL)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_SEAL)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SEAL)
   <-> "seal" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -540,7 +540,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MREV)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_MREV)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MREV)
   <-> "mrev" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -559,7 +559,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MOVC)) = {
     RETIRE_SUCCESS
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_MOVC)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MOVC)
   <-> "movc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -583,7 +583,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKE)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_REVOKE)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKE)
   <-> "revoke" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -610,7 +610,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JMP)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_JMP)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JMP)
   <-> "jmp" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -638,7 +638,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JNZ)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_JNZ)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JNZ)
   <-> "jnz" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -676,7 +676,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWC)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_LWC)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWC)
   <-> "lwc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -706,7 +706,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWS)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_LWS)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWS)
   <-> "lws" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -734,7 +734,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SWC)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_SWC)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SWC)
   <-> "swc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -771,7 +771,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPENTER)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)
   <-> "capenter" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -802,7 +802,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPEXIT)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)
   <-> "capexit" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -828,6 +828,6 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPGET)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs1, rs2, rd, CAPSTONE_CAPGET)
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPGET)
   <-> "capget" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 

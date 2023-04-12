@@ -214,7 +214,7 @@ function capstone_call(rd: bits(5), rs1: bits(5), calltype: capstone_calltype) -
 }
 
 function capstone_gen_genesis() -> cap_t = {
-    match(capnode_alloc()) {
+    match(capnode_duplicate(capnode_id_invalid, true)) {
         Some(node_id) => {
             encode_cap((sec_mem_base(),
                 sec_mem_base(), sec_mem_end(), node_id, CAP_PERM_RWX, CAP_TYPE_LIN));

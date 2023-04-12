@@ -16,13 +16,14 @@ ASM_SOURCES=$(filter-out $(TESTSUITE_SOURCE_PATH)/exit.S,$(wildcard $(TESTSUITE_
 TARGETS=$(patsubst $(TESTSUITE_SOURCE_PATH)/%.S,build/%,$(ASM_SOURCES))
 RUN_OCAML=$(patsubst $(TESTSUITE_SOURCE_PATH)/%.S,run-ocaml-%,$(ASM_SOURCES))
 RUN_C=$(patsubst $(TESTSUITE_SOURCE_PATH)/%.S,run-c-%,$(ASM_SOURCES))
+DEBUG_TARGETS=$(patsubst $(TESTSUITE_SOURCE_PATH)/%.S,debug-%,$(ASM_SOURCES))
 CFLAGS=-nostdlib -static -I env/p -I macros -I $(TESTSUITE_SOURCE_PATH) -T env/p/link.ld
 CC=riscv64-unknown-elf-gcc
 
 OCAML_SIM=../ocaml_emulator/riscv_ocaml_sim_RV64
 C_SIM=../c_emulator/riscv_sim_RV64
 
-.PHONY: all clean run-c run-ocaml $(RUN_C) $(RUN_OCAML) list
+.PHONY: all clean run-c run-ocaml $(RUN_C) $(RUN_OCAML) $(DEBUG_TARGETS) list
 
 all: $(TARGETS)
 
@@ -39,6 +40,9 @@ $(RUN_OCAML):run-ocaml-%:build/%
 $(TARGETS):build/%:$(TESTSUITE_SOURCE_PATH)/%.S
 	mkdir -p build
 	$(TRANSFORM_CMD) $^ | cat $(PREAMBLE_FILE) /dev/stdin $(EPILOGUE_FILE) | $(CC) $(CFLAGS) -o $@ -xassembler-with-cpp /dev/stdin
+
+$(DEBUG_TARGETS):debug-%:build/%
+	gdb --args $(C_SIM) $^
 
 clean:
 	rm -rf build
