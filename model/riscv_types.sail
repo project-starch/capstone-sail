@@ -436,6 +436,7 @@ enum capstone_op = {
     /* Load/store instructions of different types/widths */
     CAPSTONE_LWC, CAPSTONE_SWC, CAPSTONE_LWS,
     CAPSTONE_L16S, CAPSTONE_L32S, CAPSTONE_S16S, CAPSTONE_S32S,
+    CAPSTONE_SHS, CAPSTONE_SBS, CAPSTONE_LBS, CAPSTONE_LHS,
     /* TransCapstone only */
     CAPSTONE_CAPENTER, CAPSTONE_CAPEXIT, 
     CAPSTONE_CAPGET /* instruction for obtaining the initial capability */}

@@ -918,6 +918,132 @@ mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S32S)
 
 /************************************************************/
 
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHS) <-> 0b0011100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHS)) = {
+    let rs1_v : regtype = X(rs1);
+    let rd_v : regtype = X(rd);
+
+    match(rd_v) {
+        CapVal(c) if cap_access_allowed(c, 8, CAP_PERM_RW)
+                & capnode_query(cap_nodeid(c)) == 0b1 => {
+            let addr = cap_cursor(c);
+            mem_overwrite(addr, to_bits(xlen_val, 8));
+            assert(capstone_store_mem(addr, 8, rs1_v));
+            X(rs1) = reg_moved(rs1_v);
+            if cap_type(c) == CAP_TYPE_UNINIT then {
+                /* if the capability is uninitialized, then we
+                need to increment the cursor by the size of the
+                data being stored (8 bytes in this case) */
+                X(rd) = CapVal(cap_set_cursor(c, addr + 8));
+            };
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHS)
+  <-> "shs" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SBS) <-> 0b0011101 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SBS)) = {
+    let rs1_v : regtype = X(rs1);
+    let rd_v : regtype = X(rd);
+
+    match(rd_v) {
+        CapVal(c) if cap_access_allowed(c, 1, CAP_PERM_RW)
+                & capnode_query(cap_nodeid(c)) == 0b1 => {
+            let addr = cap_cursor(c);
+            mem_overwrite(addr, to_bits(xlen_val, 1));
+            assert(capstone_store_mem(addr, 1, rs1_v));
+            X(rs1) = reg_moved(rs1_v);
+            if cap_type(c) == CAP_TYPE_UNINIT then {
+                /* if the capability is uninitialized, then we
+                need to increment the cursor by the size of the
+                data being stored (1 bytes in this case) */
+                X(rd) = CapVal(cap_set_cursor(c, addr + 1));
+            };
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SBS)
+  <-> "sbs" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LBS) <-> 0b0010110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LBS)) = {
+    let rs1_v : regtype = X(rs1);
+    let rd_v : regtype = X(rd);
+    
+    match(rs1_v) {
+        /* load only 1 bytes as here we only load raw data */
+        CapVal(c) if cap_access_allowed(c, 1, CAP_PERM_RO) &
+                capnode_query(cap_nodeid(c)) == 0b1 => {
+            /* load data and tag */
+            let addr = cap_cursor(c);
+            let v = capstone_load_mem(addr, 1);
+            reg_overwrite(rd_v);
+            X(rd) = v;
+            /* no need to check for linear cap move as only raw data is loaded */
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LBS)
+  <-> "lbs" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LHS) <-> 0b0010111 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LHS)) = {
+    let rs1_v : regtype = X(rs1);
+    let rd_v : regtype = X(rd);
+    
+    match(rs1_v) {
+        /* load only 8 bytes as here we only load raw data */
+        CapVal(c) if cap_access_allowed(c, 8, CAP_PERM_RO) &
+                capnode_query(cap_nodeid(c)) == 0b1 => {
+            /* load data and tag */
+            let addr = cap_cursor(c);
+            let v = capstone_load_mem(addr, 8);
+            reg_overwrite(rd_v);
+            X(rd) = v;
+            /* no need to check for linear cap move as only raw data is loaded */
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LHS)
+  <-> "lhs" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
 /* TODO: details of capenter and capexit require etching out*/
 
 /* capenter does the following
@@ -929,7 +1055,7 @@ Note that capenter does not store the full calling context. It is the
 responsibility of the caller to store the calling context
 */
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)   <-> 0b0011100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)   <-> 0b0100000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
     let cur_npc = nextPC; /* PC address for resuming execution */
@@ -964,7 +1090,7 @@ mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)
   Note that the capexit instruction does not restore the full context.
 */
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)   <-> 0b0011101 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)   <-> 0b0100001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
     if mmode != CAPSTONE_MODE_SECURE | capstone_call(rd, rs1, CAPSTONE_CALL_CAPEXIT) != RETIRE_SUCCESS then {
