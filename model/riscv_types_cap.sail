@@ -76,7 +76,8 @@ mapping captype_bits : captype_t <-> captypebits = {
 
 function captype_grants_access(ty: captype_t, is_write: bool) -> bool = {
     /* FIXME: the handling of uninitialised cap is not properly done yet */
-    ty == CAP_TYPE_LIN | ty == CAP_TYPE_NONLIN | (not(is_write) & ty == CAP_TYPE_UNINIT)
+    /* uninitialised cap is only allowed to be written to */
+    ty == CAP_TYPE_LIN | ty == CAP_TYPE_NONLIN | (is_write & ty == CAP_TYPE_UNINIT)
 }
 
 /* does the capability type not allow duplicating? */

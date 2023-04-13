@@ -226,3 +226,15 @@ function capstone_gen_genesis() -> cap_t = {
         }
     };
 }
+
+function capstone_cap_initialised(c: cap_t) -> bool = {
+    let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap(c);
+    /* uninitialised capability with cursor reaching the end address */
+    ty == CAP_TYPE_UNINIT & end_addr == cursor
+}
+
+
+function capstone_initialise_nocheck(c: cap_t) -> cap_t = {
+    let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap(c);
+    encode_cap((start_addr, start_addr, end_addr, node_id, perm, CAP_TYPE_LIN))
+}
