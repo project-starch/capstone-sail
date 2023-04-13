@@ -284,11 +284,25 @@ mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_ALLOC)
 
 /************************************************************/
 
+/* directly invalidate a specific capability (can only be one of the linear types that
+would be associated uniquely with a revocation node) */
+
 mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)   <-> 0b0000001 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)) = {
-    print("good execution capstone instruction drop");
-    RETIRE_SUCCESS
+    let rs1_v : regtype = X(rs1);
+
+    match(rs1_v) {
+        CapVal(c) if captype_is_linear(cap_type(c)) => {
+            assert(capnode_invalidate(cap_nodeid(c)),
+                "drop: unable to invalidate the revocation node"); /* TODO: might also consider removing it from the revocation tree (optional) */
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
 }
 
 mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)
@@ -765,6 +779,142 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SWC)) = {
 
 mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SWC)
   <-> "swc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROPI)  <-> 0b0010000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROPI)) =
+    execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP))
+
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROPI)
+  <-> "dropi" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L16S)  <-> 0b0011000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L16S)) = {
+    let rs1_v : regtype = X(rs1);
+    let rd_v : regtype = X(rd);
+    
+    match(rs1_v) {
+        /* load only 2 bytes as here we only load raw data */
+        CapVal(c) if cap_access_allowed(c, 2, CAP_PERM_RO) &
+                capnode_query(cap_nodeid(c)) == 0b1 => {
+            /* load data and tag */
+            let addr = cap_cursor(c);
+            let v = capstone_load_mem(addr, 2);
+            reg_overwrite(rd_v);
+            X(rd) = v;
+            /* no need to check for linear cap move as only raw data is loaded */
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L16S)
+  <-> "l16s" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L32S)  <-> 0b0011001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L32S)) = {
+    let rs1_v : regtype = X(rs1);
+    let rd_v : regtype = X(rd);
+    
+    match(rs1_v) {
+        /* load only 4 bytes as here we only load raw data */
+        CapVal(c) if cap_access_allowed(c, 4, CAP_PERM_RO) &
+                capnode_query(cap_nodeid(c)) == 0b1 => {
+            /* load data and tag */
+            let addr = cap_cursor(c);
+            let v = capstone_load_mem(addr, 4);
+            reg_overwrite(rd_v);
+            X(rd) = v;
+            /* no need to check for linear cap move as only raw data is loaded */
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L32S)
+  <-> "l32s" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S16S) <-> 0b0011010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S16S)) = {
+    let rs1_v : regtype = X(rs1);
+    let rd_v : regtype = X(rd);
+
+    match(rd_v) {
+        CapVal(c) if cap_access_allowed(c, 2, CAP_PERM_RW)
+                & capnode_query(cap_nodeid(c)) == 0b1 => {
+            let addr = cap_cursor(c);
+            mem_overwrite(addr, to_bits(xlen_val, 2));
+            assert(capstone_store_mem(addr, 2, rs1_v));
+            X(rs1) = reg_moved(rs1_v);
+            if cap_type(c) == CAP_TYPE_UNINIT then {
+                /* if the capability is uninitialized, then we
+                need to increment the cursor by the size of the
+                data being stored (2 bytes in this case) */
+                X(rd) = CapVal(cap_set_cursor(c, addr + 2));
+            };
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S16S)
+  <-> "s16s" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S32S) <-> 0b0011011 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S32S)) = {
+    let rs1_v : regtype = X(rs1);
+    let rd_v : regtype = X(rd);
+
+    match(rd_v) {
+        CapVal(c) if cap_access_allowed(c, 4, CAP_PERM_RW)
+                & capnode_query(cap_nodeid(c)) == 0b1 => {
+            let addr = cap_cursor(c);
+            mem_overwrite(addr, to_bits(xlen_val, 4));
+            assert(capstone_store_mem(addr, 4, rs1_v));
+            X(rs1) = reg_moved(rs1_v);
+            if cap_type(c) == CAP_TYPE_UNINIT then {
+                /* if the capability is uninitialized, then we
+                need to increment the cursor by the size of the
+                data being stored (4 bytes in this case) */
+                X(rd) = CapVal(cap_set_cursor(c, addr + 4));
+            };
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S32S)
+  <-> "s32s" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 

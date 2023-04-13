@@ -174,3 +174,9 @@ function capnode_duplicate(node_id : capnodeidbits, as_child : bool) -> option(c
   };
   alloc
 }
+
+function capnode_invalidate(node_id : capnodeidbits) -> bool = {
+  let node = capnode_read(node_id);
+  let new_node = {node with valid = 0b0};
+  capnode_write(node_id, new_node)
+}
