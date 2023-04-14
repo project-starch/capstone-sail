@@ -493,7 +493,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SPLIT)) = {
         (CapVal(c), RawVal(v)) => {
             let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap(c);
             if(unsigned(v) < unsigned(start_addr) | unsigned(v) > unsigned(end_addr) |
-                ty != CAP_TYPE_LIN) then {
+                ty != CAP_TYPE_LIN | capnode_query(node_id) == 0b1) then {
                 handle_illegal();
                 RETIRE_FAIL
             } else {
