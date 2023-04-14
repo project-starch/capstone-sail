@@ -281,6 +281,28 @@ mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_ALLOC)
   <-> "alloc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
+/************************************************************/
+
+/* revoke a node with the given id */
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKET)   <-> 0b0000100 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKET)) = {
+    let rs1_v : regtype = X(rs1);
+    match(rs1_v) {
+        RawVal(node_id) => {
+            capnode_revoke(truncate(node_id, capnodeidlen_v));
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKET)
+  <-> "revoket" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
