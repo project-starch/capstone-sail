@@ -108,6 +108,7 @@ register x31 : regtype
 /* registers for normal world PC and stack pointer */
 register normal_npc : xlenbits
 register normal_sp  : regtype
+register switch_buffer_cap : cap_t
 
 val rX : forall 'n, 0 <= 'n < 32. regno('n) -> regtype effect {rreg, escape}
 function rX r = {

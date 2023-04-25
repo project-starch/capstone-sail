@@ -527,11 +527,8 @@ function exception_handler(cur_priv : Privilege, ctl : ctl_result,
 }
 
 /* asynchronous exit from Capstone secure world to the normal world */
-function capstone_async_exit() -> unit = {
-  /* TODO: nothing now */
-  // let _ = capstone_call(EXTZ(0b0), EXTZ(0b0), CAPSTONE_CALL_ASYNCEXIT);
-  ()
-}
+val capstone_async_exit: unit -> unit
+
 
 function handle_mem_exception(addr : xlenbits, e : ExceptionType) -> unit = {
   let t : sync_exception = struct { trap    = e,
