@@ -96,7 +96,7 @@ function translationMode(priv) = {
 
 val translateAddr_priv : (xlenbits, AccessType(ext_access_type), Privilege) -> TR_Result(xlenbits, ExceptionType) effect {escape, rmem, rmemt, rreg, wmv, wmvt, wreg}
 function translateAddr_priv(vAddr, ac, effPriv) = {
-  if mmode == CAPSTONE_MODE_SECURE then
+  if capstone_in_secure_world() then
     TR_Address(vAddr, init_ext_ptw)
   else {
     let mxr    : bool   = mstatus.MXR() == 0b1;

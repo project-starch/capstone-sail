@@ -79,7 +79,7 @@ function fetch() -> FetchResult = {
    */
 
   /* testing only */
-  if mmode == CAPSTONE_MODE_SECURE & not(check_pc_cap(get_arch_pc(), PCCap)) then {
+  if capstone_in_secure_world() & not(check_pc_cap(get_arch_pc(), PCCap)) then {
     print_cap("PCCap (invalid)", PCCap);
     F_Error(E_Fetch_Cap_Fault(), get_arch_pc())
   } else

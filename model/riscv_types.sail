@@ -444,7 +444,8 @@ enum capstone_op = {
 enum capstone_calltype = {
     CAPSTONE_CALL_NORMAL, CAPSTONE_CALL_RETURN,
     CAPSTONE_CALL_RETSEAL, 
-    CAPSTONE_CALL_CAPENTER, CAPSTONE_CALL_CAPEXIT
+    CAPSTONE_CALL_CAPENTER, CAPSTONE_CALL_CAPEXIT,
+    CAPSTONE_CALL_ASYNCEXIT
 }
 
 let capstone_context_size : int = caplen_bytes_v * 32

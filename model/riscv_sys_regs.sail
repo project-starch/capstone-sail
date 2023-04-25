@@ -66,6 +66,17 @@
 /*  SUCH DAMAGE.                                                                         */
 /*=======================================================================================*/
 
+/* program counter */
+
+/* Note that the harness code mandates that PC be of type xlenbits, so we
+store the capability for the PC separately. */
+register PC       : xlenbits
+register nextPC   : xlenbits
+
+/* Capability for the PC access. The cursor is not used. */
+register PCCap    : cap_t
+
+
 /* Machine-mode and supervisor-mode state definitions. */
 
 /* privilege level */
@@ -146,6 +157,39 @@ enum capstone_exec_mode = {
 register mmode : capstone_exec_mode
 register capget_executed : bool /* indicates whether capget has already been executed */
 /* note that for now we do not have any consideration for multi-core yet */
+
+
+/* auxiliary functions for Capstone worlds */
+
+function capstone_in_normal_world() -> bool = {
+    mmode == CAPSTONE_MODE_NORMAL
+}
+
+function capstone_in_secure_world() -> bool = {
+    mmode == CAPSTONE_MODE_SECURE
+}
+
+function capstone_enter_secure_world() -> unit = {
+    mmode = CAPSTONE_MODE_SECURE;
+}
+
+function capstone_enter_normal_world() -> unit = {
+    mmode = CAPSTONE_MODE_NORMAL;
+}
+
+
+/* effective privilege depends on which world the CPU is in */
+function effective_privilege() -> Privilege = {
+  cur_privilege /* the privilege in the secure world depends on the privilege
+  from which it is entered */
+
+  /* below is a possible alternative design */
+  // if capstone_in_normal_world() then
+  //   cur_privilege
+  // else
+  //   User
+}
+
 
 
 /* whether misa is R/W */

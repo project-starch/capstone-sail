@@ -1083,7 +1083,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
     let cur_npc = nextPC; /* PC address for resuming execution */
     let cur_sp = x2; /* current stack pointer */
 
-    if mmode != CAPSTONE_MODE_NORMAL | capstone_call(rd, rs1, CAPSTONE_CALL_CAPENTER) != RETIRE_SUCCESS
+    if not(capstone_in_normal_world()) | capstone_call(rd, rs1, CAPSTONE_CALL_CAPENTER) != RETIRE_SUCCESS
     then {
         handle_illegal();
         RETIRE_FAIL
@@ -1092,7 +1092,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
         normal_npc = cur_npc;
         normal_sp = cur_sp;
         /* set the CPU mode to secure world */
-        mmode = CAPSTONE_MODE_SECURE;
+        capstone_enter_secure_world();
 
         RETIRE_SUCCESS
     }
@@ -1115,15 +1115,17 @@ mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)
 mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)   <-> 0b0100001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
-    if mmode != CAPSTONE_MODE_SECURE | capstone_call(rd, rs1, CAPSTONE_CALL_CAPEXIT) != RETIRE_SUCCESS then {
+    if not(capstone_in_secure_world()) | capstone_call(rd, rs1, CAPSTONE_CALL_CAPEXIT) != RETIRE_SUCCESS then {
         handle_illegal();
         RETIRE_FAIL
     } else {
         /* recover the PC and stack pointer from the special registers */
         nextPC = normal_npc;
+        let x2_v : regtype = x2;
         x2 = normal_sp;
+        reg_overwrite(x2_v); /* the original value in x2 is overwritten */
         /* set the CPU mode to normal world */
-        mmode = CAPSTONE_MODE_NORMAL;
+        capstone_enter_normal_world();
 
         RETIRE_SUCCESS
     }
@@ -1141,7 +1143,7 @@ mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPGET)   <-> 0b001
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPGET)) = {
     let rd_v : regtype = X(rd);
 
-    if mmode != CAPSTONE_MODE_NORMAL & not(capget_executed) then {
+    if not(capstone_in_normal_world()) & not(capget_executed) then {
         handle_illegal();
         RETIRE_FAIL
     } else {

@@ -75,7 +75,7 @@ function step(step_no : int) -> bool = {
 
   minstret_written = false;     /* see note for minstret */
   let (retired, stepped) : (Retired, bool) =
-    match dispatchInterrupt(cur_privilege) {
+    match dispatchInterrupt(effective_privilege()) {
       Some(intr, priv) => {
         if   get_config_print_instr()
         then print_bits("Handling interrupt: ", interruptType_to_bits(intr));
