@@ -141,7 +141,6 @@ function get_next_pc_cap() -> cap_t = {
 
 /* implementation for call, return, and retseal instructions */
 /* TODO: do something different for return and retseal */
-/* TODO: might need to do something about normal_npc and normal_sp */
 function capstone_call(rd: bits(5), rs1: bits(5), calltype: capstone_calltype) -> Retired = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);

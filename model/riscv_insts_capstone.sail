@@ -1083,7 +1083,10 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
     let cur_npc = nextPC; /* PC address for resuming execution */
     let cur_sp = x2; /* current stack pointer */
 
-    if not(capstone_in_normal_world()) | capstone_call(rd, rs1, CAPSTONE_CALL_CAPENTER) != RETIRE_SUCCESS
+    print_bits("capenter in normal world = ", bool_to_bits(capstone_in_normal_world()));
+    print_bits("capenter in secure world = ", bool_to_bits(capstone_in_secure_world()));
+
+    if not(capstone_in_normal_world()) | capstone_call(rs1, EXTZ(0b0), CAPSTONE_CALL_CAPENTER) != RETIRE_SUCCESS
     then {
         handle_illegal();
         RETIRE_FAIL

@@ -149,10 +149,10 @@ bitfield Misa : xlenbits = {
 }
 register misa : Misa
 
-enum capstone_exec_mode = {
-  CAPSTONE_MODE_NORMAL,
-  CAPSTONE_MODE_SECURE
-}
+type capstone_exec_mode = int
+
+let CAPSTONE_MODE_NORMAL : capstone_exec_mode = 0
+let CAPSTONE_MODE_SECURE : capstone_exec_mode = 1
 
 register mmode : capstone_exec_mode
 register capget_executed : bool /* indicates whether capget has already been executed */
@@ -161,18 +161,22 @@ register capget_executed : bool /* indicates whether capget has already been exe
 
 /* auxiliary functions for Capstone worlds */
 
+val capstone_in_normal_world : unit -> bool effect {rreg, escape}
 function capstone_in_normal_world() -> bool = {
     mmode == CAPSTONE_MODE_NORMAL
 }
 
+val capstone_in_secure_world : unit -> bool effect {rreg, escape}
 function capstone_in_secure_world() -> bool = {
     mmode == CAPSTONE_MODE_SECURE
 }
 
+val capstone_enter_secure_world : unit -> unit effect {wreg}
 function capstone_enter_secure_world() -> unit = {
     mmode = CAPSTONE_MODE_SECURE;
 }
 
+val capstone_enter_normal_world : unit -> unit effect {wreg}
 function capstone_enter_normal_world() -> unit = {
     mmode = CAPSTONE_MODE_NORMAL;
 }
