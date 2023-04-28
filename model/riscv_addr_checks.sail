@@ -118,10 +118,8 @@ function ext_data_get_addr(base : regidx, offset : xlenbits, acc : AccessType(ex
          -> Ext_DataAddr_Check(ext_data_addr_error) =
   // FIXME: need to check whether the register contains a cap or raw data
   let base_addr : xlenbits = match (X(base) : regtype) {
-    CapVal(cap) => {
-      let (cursor, _, _, _, _, _) = decode_cap(cap) in
-      cursor
-    },
+    CapVal(cap) =>
+      cap_cursor(cap),
     RawVal(v) => v
   } in
   Ext_DataAddr_OK(base_addr + offset)

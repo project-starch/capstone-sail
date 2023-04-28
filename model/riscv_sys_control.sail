@@ -570,12 +570,15 @@ function init_capstone() = {
     print_bits("Revocation node mem base = ", rnode_mem_base());
     match(capnode_duplicate(capnode_id_invalid, true)) {
       Some(new_node_id) => {
-        PCCap = encode_cap((EXTZ(0b0) : xlenbits,
-                            EXTZ(0b0) : xlenbits,
-                            EXTZ(0b1) : xlenbits << to_bits(xlen_val, xlen_val - 1),
+        PCCap = encode_cap((CAP_TYPE_LIN,
                             new_node_id,
-                            CAP_PERM_RX,
-                            CAP_TYPE_LIN));
+                            CommonCapMetadata((
+                              EXTZ(0b0) : xlenbits,
+                              EXTZ(0b0) : xlenbits,
+                              EXTZ(0b1) : xlenbits << to_bits(xlen_val, xlen_val - 1),
+                              CAP_PERM_RX
+                            ))
+                          ));
       },
       None() => {
         assert(false, "Unable to allocate node for initial PC capability");

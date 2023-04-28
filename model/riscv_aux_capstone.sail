@@ -5,7 +5,7 @@ is decremented */
 function reg_overwrite(v: regtype) -> unit = {
     match(v) {
         CapVal(c) => {
-            let (_, _, _, node_id, _, _) = decode_cap(c);
+            let node_id = cap_nodeid(c);
             capnode_rc_dec(node_id); /* when the value is a cap, dec the ref count */
         },
         _ => { () /* nothing to do */ }
@@ -51,9 +51,8 @@ function reg_moved(v: regtype) -> regtype = {
 /* memory-access related */
 
 function cap_access_allowed(c: cap_t, width: int, req_perm: capperm_t) -> bool = {
-    let (cursor, start_addr, end_addr, ni, perm, ty) = decode_cap(c) in
-        cap_in_bound(c, cap_cursor(c), width) &
-        req_perm <=_p perm & captype_grants_access(ty, capperm_involves_write(req_perm))
+    cap_in_bound(c, cap_cursor(c), width) &
+        req_perm <=_p cap_perm(c) & captype_grants_access(cap_type(c), capperm_involves_write(req_perm))
 }
 
 function capstone_load_mem forall 'n, 0 < 'n & 'n <= 16. (addr: xlenbits, width: atom('n)) -> regtype = {
@@ -128,11 +127,9 @@ function check_pc_cap(pc: xlenbits, pc_cap: cap_t) -> bool = {
 
 function redirect_to_cap(c: cap_t) -> unit = {
     /* replace the PC capability */
-    let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap(c);
-    /* the cursor does not matter so we set it to the start address */
-    PCCap = encode_cap((start_addr, start_addr, end_addr, node_id, perm, ty));
+    PCCap = c;
     /* set the next PC value */
-    nextPC = cursor;
+    nextPC = cap_cursor(c);
 }
 
 function get_next_pc_cap() -> cap_t = {
@@ -237,27 +234,27 @@ function capstone_call(rd: bits(5), rs1: bits(5), calltype: capstone_calltype) -
 function capstone_gen_genesis() -> cap_t = {
     match(capnode_duplicate(capnode_id_invalid, true)) {
         Some(node_id) => {
-            encode_cap((sec_mem_base(),
-                sec_mem_base(), sec_mem_end(), node_id, CAP_PERM_RWX, CAP_TYPE_LIN));
+            encode_cap((CAP_TYPE_LIN, node_id,
+                        CommonCapMetadata((sec_mem_base(), sec_mem_base(), sec_mem_end(), CAP_PERM_RWX))));
         },
         None() => {
             assert(false, "cannot allocate a node for genesis capability");
-            encode_cap((EXTZ(0b0), EXTZ(0b0), EXTZ(0b0), 
-                capnode_id_invalid, CAP_PERM_NA, CAP_TYPE_LIN))
+            encode_cap((CAP_TYPE_LIN, capnode_id_invalid,
+                        CommonCapMetadata((EXTZ(0b0), EXTZ(0b0), EXTZ(0b0), CAP_PERM_NA))));
         }
     };
 }
 
 function capstone_cap_initialised(c: cap_t) -> bool = {
-    let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap(c);
+    let (_, end_addr) = cap_bounds(c);
+    let cursor = cap_cursor(c);
     /* uninitialised capability with cursor reaching the end address */
-    ty == CAP_TYPE_UNINIT & end_addr == cursor
+    cap_type(c) == CAP_TYPE_UNINIT & cursor == end_addr;
 }
 
 
 function capstone_initialise_nocheck(c: cap_t) -> cap_t = {
-    let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap(c);
-    encode_cap((start_addr, start_addr, end_addr, node_id, perm, CAP_TYPE_LIN))
+    cap_set_type(c, CAP_TYPE_LIN)
 }
 
 function capstone_async_exit() -> unit = {

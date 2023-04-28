@@ -98,7 +98,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPBOUND)) = {
     let rs2_v : regtype = X(rs2);
     match((rs1_v, rs2_v, rd_v)) {
         (RawVal(v1), RawVal(v2), CapVal(cv)) => {
-            X(rd) = CapVal(cap_set_bound(cv, v1, v2));
+            X(rd) = CapVal(cap_set_bound_cursor(cv, v1, v1, v2));
             RETIRE_SUCCESS
         },
         _ => {
@@ -513,7 +513,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SPLIT)) = {
     let rd_v : regtype = X(rd);
     match((rs1_v, rs2_v)) {
         (CapVal(c), RawVal(v)) => {
-            let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap(c);
+            let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap_legacy(c);
             if(unsigned(v) < unsigned(start_addr) | unsigned(v) > unsigned(end_addr) |
                 ty != CAP_TYPE_LIN | capnode_query(node_id) == 0b1) then {
                 handle_illegal();
@@ -524,9 +524,9 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SPLIT)) = {
                 match(capnode_duplicate(node_id, false)) {
                     Some(new_node_id) => {
                         let c2_dec = (v, v, end_addr, new_node_id, perm, ty);
-                        X(rs1) = CapVal(encode_cap(c1_dec));
+                        X(rs1) = CapVal(encode_cap_legacy(c1_dec));
                         reg_overwrite(rd_v);
-                        X(rd) = CapVal(encode_cap(c2_dec));
+                        X(rd) = CapVal(encode_cap_legacy(c2_dec));
                         RETIRE_SUCCESS
                     },
                     None() => {
@@ -576,14 +576,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MREV)) = {
     let rs1_v : regtype = X(rs1);
     match(rs1_v) {
         CapVal(c) if cap_type(c) == CAP_TYPE_LIN => {
-            let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap(c);
+            let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap_legacy(c);
             match(capnode_duplicate(node_id, true)) {
                 Some(new_node_id) => {
                     let old_cap = (cursor, start_addr, end_addr, new_node_id, perm, ty);
                     let new_cap = (cursor, start_addr, end_addr, node_id, perm, CAP_TYPE_REV);
-                    X(rs1) = CapVal(encode_cap(old_cap));
+                    X(rs1) = CapVal(encode_cap_legacy(old_cap));
                     reg_overwrite(rd_v);
-                    X(rd) = CapVal(encode_cap(new_cap));
+                    X(rd) = CapVal(encode_cap_legacy(new_cap));
                     RETIRE_SUCCESS
                 },
                 None() => {
@@ -631,7 +631,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKE)) = {
     
     match(rs1_v) {
         CapVal(c) if cap_type(c) == CAP_TYPE_REV => {
-            let (_, _, _, node_id, _, _) = decode_cap(c);
+            let (_, _, _, node_id, _, _) = decode_cap_legacy(c);
             capnode_revoke(node_id);
             RETIRE_SUCCESS
         },
