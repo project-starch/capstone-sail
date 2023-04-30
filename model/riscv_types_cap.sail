@@ -420,3 +420,6 @@ function cap_string(cap: cap_t) -> string = {
         BitStr(ni) ^ sep() ^
         capmetadata_string(metadata) ^ ")"
 }
+
+// let CAP_INVALID = encode_cap((CAP_TYPE_NONLIN, EXTZ(0b0), CommonCapMetadata(EXTZ(0b0), EXTZ(0b0), EXTZ(0b0), CAP_PERM_NA)))
+let CAP_INVALID : cap_t = EXTZ(0b0)

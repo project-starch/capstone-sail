@@ -334,7 +334,7 @@ mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)
 
 mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)   <-> 0b0000001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)) = capstone_call(rd, rs1, CAPSTONE_CALL_NORMAL)
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)) = capstone_call(rd, rs1, rs2, CAPSTONE_CALL_NORMAL)
 
 mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)
   <-> "call" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
@@ -344,7 +344,7 @@ mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)
 
 mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RETURN)   <-> 0b0010100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RETURN)) = capstone_call(rd, rs1, CAPSTONE_CALL_RETURN)
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RETURN)) = capstone_call(rd, rs1, rs2, CAPSTONE_CALL_RETURN)
 
 mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RETURN)
   <-> "return" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
@@ -1086,7 +1086,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
     print_bits("capenter in normal world = ", bool_to_bits(capstone_in_normal_world()));
     print_bits("capenter in secure world = ", bool_to_bits(capstone_in_secure_world()));
 
-    if not(capstone_in_normal_world()) | capstone_call(rs1, EXTZ(0b0), CAPSTONE_CALL_CAPENTER) != RETIRE_SUCCESS
+    if not(capstone_in_normal_world()) | capstone_call(rs1, EXTZ(0b0), EXTZ(0b0), CAPSTONE_CALL_CAPENTER) != RETIRE_SUCCESS
     then {
         handle_illegal();
         RETIRE_FAIL
@@ -1118,7 +1118,7 @@ mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)
 mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)   <-> 0b0100001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
-    if not(capstone_in_secure_world()) | capstone_call(rd, rs1, CAPSTONE_CALL_CAPEXIT) != RETIRE_SUCCESS then {
+    if not(capstone_in_secure_world()) | capstone_call(rd, rs1, rs2, CAPSTONE_CALL_CAPEXIT) != RETIRE_SUCCESS then {
         handle_illegal();
         RETIRE_FAIL
     } else {

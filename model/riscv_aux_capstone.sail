@@ -136,15 +136,36 @@ function get_next_pc_cap() -> cap_t = {
     cap_set_cursor(PCCap, nextPC)
 }
 
+
+function capstone_calltype_match(calltype: capstone_calltype, captype: captype_t) -> bool = {
+    match(calltype, captype) {
+        (CAPSTONE_CALL_NORMAL, CAP_TYPE_SEALED) => true,
+        (CAPSTONE_CALL_RETURN, CAP_TYPE_SEALEDRET) => true,
+        (CAPSTONE_CALL_RETSEAL, CAP_TYPE_SEALEDRET) => true,
+        (CAPSTONE_CALL_CAPENTER, CAP_TYPE_SEALED) => true,
+        (CAPSTONE_CALL_CAPEXIT, CAP_TYPE_SEALEDRET) => true,
+        (CAPSTONE_CALL_ASYNCEXIT, CAP_TYPE_SEALEDRET) => true,
+        _ => false
+    }
+}
+
+function capstone_sealed_gprs_n(ty: captype_t, size: bits(5)) -> int = {
+    match(ty, size == EXTZ(0b0)) {
+        (CAP_TYPE_SEALED, _) => unsigned(size),
+        (CAP_TYPE_SEALEDRET, true) => 31,
+        (CAP_TYPE_SEALEDRET, false) => 0
+    }
+}
+
 /* implementation for call, return, and retseal instructions */
 /* TODO: do something different for return and retseal */
-function capstone_call(rd: bits(5), rs1: bits(5), calltype: capstone_calltype) -> Retired = {
+function capstone_call(rd: bits(5), rs1: bits(5), rs2: bits(5), calltype: capstone_calltype) -> Retired = {
     let rs1_v : regtype = X(rs1);
+    let rs2_v : xlenbits = X(rs2);
     let rd_v : regtype = X(rd);
 
     let rd_v_moved = reg_moved(rd_v);
     let rs1_v_moved = reg_moved(rs1_v);
-
 
     if calltype == CAPSTONE_CALL_CAPEXIT then {
         /* no need to do anything for capexit */
@@ -159,69 +180,152 @@ function capstone_call(rd: bits(5), rs1: bits(5), calltype: capstone_calltype) -
         else
             rd_v;
         match(rd_v) {
-            CapVal(c) if captype_is_sealed(cap_type(c)) & capnode_query(cap_nodeid(c)) == 0b1 &
-                /* check that the size is sufficient for a context */
-                unsigned(cap_bound_size(c)) >= capstone_context_size => {
+            CapVal(c) if capnode_query(cap_nodeid(c)) == 0b1
+                & capstone_calltype_match(calltype, cap_type(c)) /* calltype and cap type must match */
+                    /* no need to check the size */
+                    /* check when sealing instead */
+                    => {
+                
+                let (ty, _, metadata) = decode_cap(c);
+                match(metadata) {
+                    SealedCapMetadata(base_addr, size) => {
+                        let (out_valid, out_type, out_size, store_to_regs, load_from_regs) :
+                                (bool, captype_t, bits(5), bool, bool) = match(calltype) {
+                            CAPSTONE_CALL_NORMAL => (true, CAP_TYPE_SEALEDRET, EXTZ(0b0), false, false),
+                            CAPSTONE_CALL_RETURN => (false, CAP_TYPE_SEALED, EXTZ(0b0), false, false),
+                            CAPSTONE_CALL_RETSEAL => (true, CAP_TYPE_SEALED, rs2_v[4..0], false, false),
+                            CAPSTONE_CALL_CAPENTER => (true, CAP_TYPE_SEALEDRET, EXTZ(0b0), true, false), /* TODO: deal with this in details */
+                            CAPSTONE_CALL_CAPEXIT => (false, CAP_TYPE_SEALED, EXTZ(0b0), false, true),
+                            CAPSTONE_CALL_CAPEXITSEAL => (true, CAP_TYPE_SEALED, rs2_v[4..0], false, true),
+                            CAPSTONE_CALL_ASYNCEXIT => (true, CAP_TYPE_SEALED, to_bits(5, 31), false, true)
+                        };
 
-                let (start_addr, _) = cap_bounds(c);
+                        /* determine the size of the context load/store */
+                        // let (ctx_load_size, ctx_store_size, store_pc, store_sp, enter_secure): 
+                        //     (int, int, bool, bool) = match(calltype) {
+                        //     CAPSTONE_CALL_CAPENTER => (unsigned(size), 0, true, true, true),
+                        //     CAPSTONE_CALL_RETURN if size == EXTZ(0b0) => (31, 0, false, false, false),
+                        //     CAPSTONE_CALL_RETSEAL if size == EXTZ(0b0) => (31, rs2_v, true, true, false),
+                        //     CAPSTONE_CALL_RETURN if size != EXTZ(0b0) => (0, 0, false, false, false), 
+                        //     CAPSTONE_CALL_RETSEAL if size != EXTZ(0b0) => (0, rs2_v, true, true, false),
+                        //     CAPSTONE_CALL_ASYNCEXIT => (0, 31, true, true, false),
+                        //     CAPSTONE_CALL_CAPEXIT => (0, 0, false, false, false),
+                        //     CAPSTONE_CALL_CAPEXITSEAL if size == EXTZ(0b0) => (31, rs2_v, true, true, false),
+                        //     CAPSTONE_CALL_CAPEXITSEAL if size != EXTZ(0b0) => (0, rs2_v, true, true, false)
+                        // };
 
-                let next_pc_cap = get_next_pc_cap();
-                let target_val = capstone_load_mem(start_addr, caplen_bytes_v);
-                match(target_val) {
-                    CapVal(pc_c) => { redirect_to_cap(pc_c); },
+                        /* store context. Scenarios: */
+                        /* a) call: pc, sp */
+                        /* b) return/capexit: nothing */
+                        /* c) retsealed/capexitsealed: pc, n GPRs */
+                        /* d) capenter: pc, sp in dedicated registers */
+                        /* e) asyncexit: full context */
+
+                        /* load remaining context. Scenarios: */
+                        /* a) call/capenter: load `size` values */
+                        /* b) return/retsealed (size != 0): load nothing */
+                        /* c) return/retsealed (size = 0): load full context */
+                        /* d) asyncexit/capexit/capexitsealed: load nothing */
+
+                        /* load PC and SP */
+                        let (loaded_next_pc_cap, loaded_sp) : (regtype, regtype) = if load_from_regs then {
+                            /* load from the special registers */
+                            (RawVal(normal_npc), normal_sp)
+                        } else {
+                            /* load from the sealed region */
+                            (capstone_load_mem(base_addr, caplen_bytes_v), capstone_load_mem(base_addr + to_bits(xlen_val, caplen_bytes_v), caplen_bytes_v))
+                        };
+
+                        /* store PC and SP */
+                        let next_pc_cap = get_next_pc_cap();
+                        if store_to_regs then {
+                            /* store those to the special registers */
+                            normal_npc = nextPC;
+                            normal_sp = X(2); /* x2 = sp */
+                        } else if out_valid then {
+                            /* if this will produce a valid sealed/sealed-ret capability */
+                            /* we will need to store them in the sealed region */
+                            /* TODO: we are not considering rcupdate yet */
+                            assert(capstone_store_mem(base_addr, caplen_bytes_v, CapVal(next_pc_cap)));
+                            assert(capstone_store_mem(base_addr + to_bits(xlen_val, caplen_bytes_v), caplen_bytes_v, X(2)));
+                        };
+
+                        /* writeback PC and SP */
+                        match(loaded_next_pc_cap) {
+                            CapVal(pc_c) => { redirect_to_cap(pc_c); },
+                            RawVal(v) => {
+                                nextPC = v;
+                                /* invalidate the original PC capability */
+                                /* TODO: handle rcupdate */
+                                PCCap = CAP_INVALID;
+                            }
+                        };
+
+                        /* swap the remaining context */
+
+                        /* compute the number of GPRs to load and store */
+                        /* depending on the input and output sealed types and sizes */
+                        let n_gprs_to_load : int = capstone_sealed_gprs_n(ty, size);
+                        let n_gprs_to_store : int = if out_valid then capstone_sealed_gprs_n(out_type, out_size) else 0;
+
+                        reg_idx : int = 3; /* skipping x0, x1 (ra), and x2 (sp) */
+                        /* for now we are making this straightforward */
+                        /* TODO: offset */
+                        while reg_idx < 32 do {
+                            let reg_idx_bits = to_bits(5, reg_idx);
+                            let cur_addr = base_addr + to_bits(xlen_val, reg_idx * caplen_bytes_v);
+                            let reg_val : regtype = X(reg_idx_bits);
+                            let reg_n : int = reg_idx - 3; /* number of regs already considered */
+                            if reg_n < n_gprs_to_load then {
+                                /* we need to load the value */
+                                X(reg_idx_bits) = capstone_load_mem(cur_addr, caplen_bytes_v);
+                            };
+                            if reg_n < n_gprs_to_store then {
+                                /* we need to store the value */
+                                assert(capstone_store_mem(cur_addr, caplen_bytes_v, reg_val));
+                                /* NOTE: if we store a value that is not loaded, we zero it to avoid secret leakage */
+                                if reg_n >= n_gprs_to_load then {
+                                    X(reg_idx_bits) = RawVal(EXTZ(0b0));
+                                };
+                            };
+                            reg_idx = reg_idx + 1;
+                        };
+
+                        /* deal with ra */
+                        let ra_v : regtype = X(1);
+                        let cur_addr = base_addr + to_bits(xlen_val, 31 * caplen_bytes_v); /* TODO: double check */
+                        if calltype != CAPSTONE_CALL_CAPENTER & out_valid then {
+                            /* if we want a valid sealed capability in ra, the capability will reside in ra */
+                            /* NOTE: for capenter, the ra will be placed in a special register */
+                            /* TODO:echeck if it is okay to ignore n_gprs_to_load at this point */
+                            X(1) = rd_v;
+                        } else if n_gprs_to_load == 31 then {
+                            /* need to load ra from memory */
+                            X(1) = capstone_load_mem(cur_addr, caplen_bytes_v);
+                        } else if n_gprs_to_store == 31 then {
+                            /* stored but not loaded, we zero the register to protect the data */
+                            X(1) = RawVal(EXTZ(0b0));
+                        };
+                        if n_gprs_to_store == 31 then {
+                            /* we need to store ra */
+                            assert(capstone_store_mem(cur_addr, caplen_bytes_v, ra_v));
+                        };
+
+                        if calltype == CAPSTONE_CALL_CAPENTER then {
+                            /* store the invoked sealed capability as switch_buffer_cap */
+                            switch_buffer_cap = c;
+                        };
+
+                        /* TODO: for return types, we need to place the sealed capability in a register */
+
+                        RETIRE_SUCCESS
+                    },
                     _ => {
                         handle_illegal();
-                        return RETIRE_FAIL;
+                        RETIRE_FAIL
                     }
-                };
+                }
 
-                /* TODO: for capenter and capexit, do we save the context? */
-                /* TODO: actually, for secure world domain switches, there might also be some more
-                clever interface designs which allow the caller to perform register save by itself */
-                reg_idx : int = 1;
-                while reg_idx < 32 do {
-                    let cur_addr = start_addr + to_bits(xlen_val, reg_idx * caplen_bytes_v);
-                    let reg_idx_bits = to_bits(5, reg_idx);
-                    /* swap the register value */
-                    if calltype == CAPSTONE_CALL_CAPENTER then {
-                        /* for capenter, we only load the context */
-                        let v : regtype = X(reg_idx_bits);
-                        X(reg_idx_bits) = capstone_load_mem(cur_addr, caplen_bytes_v);
-                        reg_overwrite(v);
-                    } else if calltype == CAPSTONE_CALL_ASYNCEXIT then {
-                        /* for asynchronous exit, we only save the context to switch_buffer_cap */
-                        mem_overwrite(cur_addr, to_bits(xlen_val, caplen_bytes_v));
-                        let v_to_save : regtype = X(reg_idx_bits);
-                        assert(capstone_store_mem(cur_addr, caplen_bytes_v, v_to_save));
-                    } else {
-                        let v_to_save : regtype = if reg_idx_bits == rs1 then rs1_v_moved
-                            else if reg_idx_bits == rd then rd_v_moved
-                            else X(reg_idx_bits);
-                        if reg_idx == capstone_reg_ret then {
-                            /* the original value at the memory location is hence destroyed */
-                            mem_overwrite(cur_addr, to_bits(xlen_val, caplen_bytes_v));
-                            X(reg_idx_bits) = rd_v; /* TODO: change the type to sealed-ret */
-                        } else if reg_idx == capstone_reg_arg then {
-                            mem_overwrite(cur_addr, to_bits(xlen_val, caplen_bytes_v));
-                            X(reg_idx_bits) = rs1_v;
-                        } else {
-                            X(reg_idx_bits) = capstone_load_mem(cur_addr, caplen_bytes_v);
-                        };
-                        assert(capstone_store_mem(cur_addr, caplen_bytes_v, v_to_save));
-                    };
-                    reg_idx = reg_idx + 1;
-                };
-
-                if calltype == CAPSTONE_CALL_NORMAL | calltype == CAPSTONE_CALL_RETURN |
-                                            calltype == CAPSTONE_CALL_RETSEAL then {
-                    /* save next PC cap */
-                    assert(capstone_store_mem(start_addr, caplen_bytes_v, CapVal(next_pc_cap)));
-                } else if calltype == CAPSTONE_CALL_CAPENTER then {
-                    /* store the invoked sealed capability as switch_buffer_cap */
-                    switch_buffer_cap = c;
-                };
-
-                RETIRE_SUCCESS
             },
             _ => {
                 handle_illegal();
@@ -258,5 +362,5 @@ function capstone_initialise_nocheck(c: cap_t) -> cap_t = {
 }
 
 function capstone_async_exit() -> unit = {
-    let _ = capstone_call(EXTZ(0b0), EXTZ(0b0), CAPSTONE_CALL_ASYNCEXIT);
+    let _ = capstone_call(EXTZ(0b0), EXTZ(0b0), EXTZ(0b0), CAPSTONE_CALL_ASYNCEXIT);
 }
