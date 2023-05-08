@@ -1139,6 +1139,30 @@ mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)
 
 /************************************************************/
 
+/* TODO: capexitseal is similar to capexit, but seals the */
+
+mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXITSEAL)   <-> 0b0100010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXITSEAL)) = {
+    if not(capstone_in_secure_world()) | capstone_call(rd, rs1, rs2, CAPSTONE_CALL_CAPEXITSEAL) != RETIRE_SUCCESS then {
+        handle_illegal();
+        RETIRE_FAIL
+    } else {
+        /* recover the PC and stack pointer from the special registers */
+        nextPC = normal_npc;
+        let x2_v : regtype = x2;
+        x2 = normal_sp;
+        reg_overwrite(x2_v); /* the original value in x2 is overwritten */
+        /* set the CPU mode to normal world */
+        capstone_enter_normal_world();
+
+        RETIRE_SUCCESS
+    }
+}
+
+
+/************************************************************/
+
 /* capget generates the genesis capability for the whole secure memory */
 
 mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPGET)   <-> 0b0011110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011

@@ -158,7 +158,6 @@ function capstone_sealed_gprs_n(ty: captype_t, size: bits(5)) -> int = {
 }
 
 /* implementation for call, return, and retseal instructions */
-/* TODO: do something different for return and retseal */
 function capstone_call(rd: bits(5), rs1: bits(5), rs2: bits(5), calltype: capstone_calltype) -> Retired = {
     let rs1_v : regtype = X(rs1);
     let rs2_v : xlenbits = X(rs2);
@@ -199,20 +198,6 @@ function capstone_call(rd: bits(5), rs1: bits(5), rs2: bits(5), calltype: capsto
                             CAPSTONE_CALL_CAPEXITSEAL => (true, CAP_TYPE_SEALED, rs2_v[4..0], false, true),
                             CAPSTONE_CALL_ASYNCEXIT => (true, CAP_TYPE_SEALED, to_bits(5, 31), false, true)
                         };
-
-                        /* determine the size of the context load/store */
-                        // let (ctx_load_size, ctx_store_size, store_pc, store_sp, enter_secure): 
-                        //     (int, int, bool, bool) = match(calltype) {
-                        //     CAPSTONE_CALL_CAPENTER => (unsigned(size), 0, true, true, true),
-                        //     CAPSTONE_CALL_RETURN if size == EXTZ(0b0) => (31, 0, false, false, false),
-                        //     CAPSTONE_CALL_RETSEAL if size == EXTZ(0b0) => (31, rs2_v, true, true, false),
-                        //     CAPSTONE_CALL_RETURN if size != EXTZ(0b0) => (0, 0, false, false, false), 
-                        //     CAPSTONE_CALL_RETSEAL if size != EXTZ(0b0) => (0, rs2_v, true, true, false),
-                        //     CAPSTONE_CALL_ASYNCEXIT => (0, 31, true, true, false),
-                        //     CAPSTONE_CALL_CAPEXIT => (0, 0, false, false, false),
-                        //     CAPSTONE_CALL_CAPEXITSEAL if size == EXTZ(0b0) => (31, rs2_v, true, true, false),
-                        //     CAPSTONE_CALL_CAPEXITSEAL if size != EXTZ(0b0) => (0, rs2_v, true, true, false)
-                        // };
 
                         /* store context. Scenarios: */
                         /* a) call: pc, sp */
@@ -297,7 +282,7 @@ function capstone_call(rd: bits(5), rs1: bits(5), rs2: bits(5), calltype: capsto
                         if calltype != CAPSTONE_CALL_CAPENTER & out_valid then {
                             /* if we want a valid sealed capability in ra, the capability will reside in ra */
                             /* NOTE: for capenter, the ra will be placed in a special register */
-                            /* TODO:echeck if it is okay to ignore n_gprs_to_load at this point */
+                            /* TODO: check if it is okay to ignore n_gprs_to_load at this point */
                             X(1) = rd_v;
                         } else if n_gprs_to_load == 31 then {
                             /* need to load ra from memory */
@@ -316,7 +301,10 @@ function capstone_call(rd: bits(5), rs1: bits(5), rs2: bits(5), calltype: capsto
                             switch_buffer_cap = c;
                         };
 
-                        /* TODO: for return types, we need to place the sealed capability in a register */
+                        /* for return types, we need to place the sealed capability in a register */
+                        if ty == CAP_TYPE_SEALEDRET then {
+                            X(size) = ra_v;
+                        };
 
                         RETIRE_SUCCESS
                     },
