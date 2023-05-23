@@ -1,25 +1,26 @@
-union clause ast = CAPSTONE_INSN : (regidx, regidx, regidx, capstone_op)
+union clause ast = CAPSTONE_INSN_R : (regidx, regidx, regidx, capstone_op_r)
+union clause ast = CAPSTONE_INSN_I : (regidx, regidx, imm12, capstone_op_i)
 
 /************************************************************/
 
 /** Backdoor instructions for testing only */
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPCREATE)   <-> 0b0000101 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPCREATE)   <-> 0b0000101 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPCREATE)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPCREATE)) = {
     X(rd) = CapVal(EXTZ(0b0));
     RETIRE_SUCCESS
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPCREATE)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPCREATE)
   <-> "capcreate" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPTYPE)   <-> 0b0000110 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPTYPE)   <-> 0b0000110 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPTYPE)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPTYPE)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     match((rs1_v, rd_v)) {
@@ -36,15 +37,15 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPTYPE)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPTYPE)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPTYPE)
   <-> "captype" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPNODE)   <-> 0b0000111 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPNODE)   <-> 0b0000111 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPNODE)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPNODE)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     match((rs1_v, rd_v)) {
@@ -60,15 +61,15 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPNODE)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPNODE)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPNODE)
   <-> "capnode" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPPERM)   <-> 0b0001000 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPPERM)   <-> 0b0001000 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPPERM)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPPERM)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     match((rs1_v, rd_v)) {
@@ -84,15 +85,15 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPPERM)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPPERM)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPPERM)
   <-> "capperm" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPBOUND)   <-> 0b0001001 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPBOUND)   <-> 0b0001001 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPBOUND)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPBOUND)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
@@ -109,14 +110,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPBOUND)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPBOUND)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPBOUND)
   <-> "capbound" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPBOUND)   <-> 0b0001001 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPBOUND)   <-> 0b0001001 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPBOUND)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPBOUND)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
@@ -133,28 +134,28 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPBOUND)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPBOUND)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPBOUND)
   <-> "capbound" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPPRINT)   <-> 0b0001010 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPPRINT)   <-> 0b0001010 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPPRINT)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPPRINT)) = {
     let rs1_v : regtype = X(rs1);
     print_string("capprint: ", RegStr(rs1_v));
     RETIRE_SUCCESS
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPPRINT)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPPRINT)
   <-> "capprint" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGGET)   <-> 0b0001100 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_TAGGET)   <-> 0b0001100 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGGET)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_TAGGET)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
 
@@ -171,14 +172,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGGET)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGGET)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_TAGGET)
   <-> "tagget" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGSET)   <-> 0b0001011 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_TAGSET)   <-> 0b0001011 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGSET)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_TAGSET)) = {
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
 
@@ -194,14 +195,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGSET)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TAGSET)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_TAGSET)
   <-> "tagset" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)   <-> 0b0000000 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_QUERY)   <-> 0b0000000 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_QUERY)) = {
     let rs1_v : regtype = X(rs1);
     match(rs1_v) {
         RawVal(v) => {
@@ -216,18 +217,18 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_QUERY)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_QUERY)
   <-> "query" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RCUPDATE)   <-> 0b0000010 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RCUPDATE)   <-> 0b0000010 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
 /*
 update the ref count for a given node id directly
 */
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RCUPDATE)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RCUPDATE)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
     match((rd_v, rs1_v)) {
@@ -242,18 +243,18 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RCUPDATE)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RCUPDATE)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RCUPDATE)
   <-> "rcupdate" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_ALLOC)   <-> 0b0000011 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_ALLOC)   <-> 0b0000011 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
 /*
 allocates a new child node for a given revocation node and stores the id of the new node
 in the destination register
 */
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_ALLOC)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_ALLOC)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
     match(rs1_v) {
@@ -277,7 +278,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_ALLOC)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_ALLOC)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_ALLOC)
   <-> "alloc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -285,9 +286,9 @@ mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_ALLOC)
 
 /* revoke a node with the given id */
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKET)   <-> 0b0000100 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_REVOKET)   <-> 0b0000100 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKET)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_REVOKET)) = {
     let rs1_v : regtype = X(rs1);
     match(rs1_v) {
         RawVal(node_id) => {
@@ -301,7 +302,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKET)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKET)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_REVOKET)
   <-> "revoket" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -309,9 +310,9 @@ mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKET)
 /* directly invalidate a specific capability (can only be one of the linear types that
 would be associated uniquely with a revocation node) */
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)   <-> 0b0000001 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_DROP)   <-> 0b0000001 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_DROP)) = {
     let rs1_v : regtype = X(rs1);
 
     match(rs1_v) {
@@ -327,35 +328,35 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_DROP)
   <-> "drop" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)   <-> 0b0000001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)   <-> 0b0000001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)) = capstone_call(rd, rs1, rs2, CAPSTONE_CALL_NORMAL)
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)) = capstone_call(rd, rs1, rs2, CAPSTONE_CALL_NORMAL)
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CALL)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)
   <-> "call" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RETURN)   <-> 0b0010100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)   <-> 0b0010100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RETURN)) = capstone_call(rd, rs1, rs2, CAPSTONE_CALL_RETURN)
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = capstone_call(rd, rs1, rs2, CAPSTONE_CALL_RETURN)
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_RETURN)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)
   <-> "return" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHRINK)   <-> 0b0000100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SHRINK)   <-> 0b0000100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHRINK)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SHRINK)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
@@ -379,14 +380,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHRINK)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHRINK)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SHRINK)
   <-> "shrink" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TIGHTEN)   <-> 0b0000110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_TIGHTEN)   <-> 0b0000110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TIGHTEN)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_TIGHTEN)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     match((rd_v, rs1_v)) {
@@ -409,14 +410,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TIGHTEN)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_TIGHTEN)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_TIGHTEN)
   <-> "tighten" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DELIN)   <-> 0b0000111 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_DELIN)   <-> 0b0000111 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DELIN)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_DELIN)) = {
     let rd_v : regtype = X(rd);
     match(rd_v) {
         CapVal(cv) if cap_type(cv) == CAP_TYPE_LIN => {
@@ -430,15 +431,15 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DELIN)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DELIN)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_DELIN)
   <-> "delin" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SCC)   <-> 0b0001000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SCC)   <-> 0b0001000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SCC)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SCC)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     match((rd_v, rs1_v)) {
@@ -454,14 +455,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SCC)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SCC)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SCC)
   <-> "scc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_INIT)  <-> 0b0001001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_INIT)  <-> 0b0001001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_INIT)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_INIT)) = {
     let rd_v : regtype = X(rd);
 
     match(rd_v) {
@@ -476,14 +477,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_INIT)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_INIT)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_INIT)
   <-> "init" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LCC)   <-> 0b0001101 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LCC)   <-> 0b0001101 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LCC)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LCC)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
     match(rs1_v) {
@@ -499,15 +500,15 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LCC)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LCC)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LCC)
   <-> "lcc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SPLIT)   <-> 0b0010010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SPLIT)   <-> 0b0010010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SPLIT)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SPLIT)) = {
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
     let rd_v : regtype = X(rd);
@@ -543,14 +544,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SPLIT)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SPLIT)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SPLIT)
   <-> "split" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SEAL)   <-> 0b0001010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SEAL)   <-> 0b0001010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SEAL)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SEAL)) = {
     let rd_v : regtype = X(rd);
     match(rd_v) {
         CapVal(c) if cap_type(c) == CAP_TYPE_LIN => {
@@ -564,14 +565,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SEAL)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SEAL)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SEAL)
   <-> "seal" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MREV)   <-> 0b0010001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MREV)   <-> 0b0010001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MREV)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MREV)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     match(rs1_v) {
@@ -599,15 +600,15 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MREV)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MREV)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MREV)
   <-> "mrev" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MOVC)   <-> 0b0001100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MOVC)   <-> 0b0001100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MOVC)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MOVC)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     if(rd != rs1) then {
@@ -618,15 +619,15 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MOVC)) = {
     RETIRE_SUCCESS
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_MOVC)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MOVC)
   <-> "movc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKE)   <-> 0b0000000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_REVOKE)   <-> 0b0000000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKE)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_REVOKE)) = {
     let rs1_v : regtype = X(rs1);
     
     match(rs1_v) {
@@ -642,15 +643,15 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKE)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_REVOKE)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_REVOKE)
   <-> "revoke" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JMP)   <-> 0b0000010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JMP)   <-> 0b0000010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JMP)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JMP)) = {
     let rs1_v : regtype = X(rs1);
     
     match(rs1_v) {
@@ -669,15 +670,15 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JMP)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JMP)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JMP)
   <-> "jmp" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JNZ)   <-> 0b0000011 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JNZ)   <-> 0b0000011 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JNZ)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JNZ)) = {
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
     
@@ -697,17 +698,25 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JNZ)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_JNZ)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JNZ)
   <-> "jnz" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWC)   <-> 0b0001110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LWC)   <-> 0b0001110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWC)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LWC)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
+
+    print_string("capprint: ", RegStr(rs1_v));
+    match(rs1_v) {
+        CapVal(c) => {
+            print_bits("capquery: ", capnode_query(cap_nodeid(c)));
+        },
+        _ => ()
+    };
     
     match(rs1_v) {
         CapVal(c) if cap_access_allowed(c, 16, CAP_PERM_RO) &
@@ -715,18 +724,19 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWC)) = {
             /* load data and tag */
             let addr = cap_cursor(c); 
             let v = capstone_load_mem(addr, 16);
-            match(v) {
-                CapVal(loaded_c) => {
-                    reg_overwrite(rd_v);
-                    X(rd) = v;
-                    assert(mem_moved(addr, v)); /* the value is moved from the original location */
-                    RETIRE_SUCCESS
-                },
-                _ => {
-                    handle_illegal();
-                    RETIRE_FAIL
-                }
-            }
+            print_string("loaded value: ", RegStr(v));
+            // match(v) {
+            //     CapVal(loaded_c) => {
+            reg_overwrite(rd_v);
+            X(rd) = v;
+            assert(mem_moved(addr, v)); /* the value is moved from the original location */
+            RETIRE_SUCCESS
+            //     },
+            //     _ => {
+            //         handle_illegal();
+            //         RETIRE_FAIL
+            //     }
+            // }
         },
         _ => {
             handle_illegal();
@@ -735,14 +745,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWC)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWC)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LWC)
   <-> "lwc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWS)   <-> 0b0010011 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LWS)   <-> 0b0010011 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWS)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LWS)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
     
@@ -765,15 +775,15 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWS)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LWS)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LWS)
   <-> "lws" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SWC)   <-> 0b0001111 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SWC)   <-> 0b0001111 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SWC)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SWC)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
 
@@ -799,24 +809,24 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SWC)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SWC)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SWC)
   <-> "swc" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROPI)  <-> 0b0010000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_DROPI)  <-> 0b0010000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROPI)) =
-    execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROP))
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_DROPI)) =
+    execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_DROP))
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_DROPI)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_DROPI)
   <-> "dropi" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L16S)  <-> 0b0011000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_L16S)  <-> 0b0011000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L16S)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_L16S)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
     
@@ -839,14 +849,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L16S)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L16S)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_L16S)
   <-> "l16s" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L32S)  <-> 0b0011001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_L32S)  <-> 0b0011001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L32S)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_L32S)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
     
@@ -869,14 +879,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L32S)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_L32S)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_L32S)
   <-> "l32s" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S16S) <-> 0b0011010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_S16S) <-> 0b0011010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S16S)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_S16S)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
 
@@ -902,14 +912,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S16S)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S16S)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_S16S)
   <-> "s16s" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S32S) <-> 0b0011011 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_S32S) <-> 0b0011011 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S32S)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_S32S)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
 
@@ -935,14 +945,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S32S)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_S32S)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_S32S)
   <-> "s32s" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHS) <-> 0b0011100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SHS) <-> 0b0011100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHS)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SHS)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
 
@@ -968,14 +978,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHS)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SHS)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SHS)
   <-> "shs" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SBS) <-> 0b0011101 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SBS) <-> 0b0011101 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SBS)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SBS)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
 
@@ -1001,14 +1011,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SBS)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_SBS)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SBS)
   <-> "sbs" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LBS) <-> 0b0010110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LBS) <-> 0b0010110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LBS)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LBS)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
     
@@ -1031,14 +1041,14 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LBS)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LBS)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LBS)
   <-> "lbs" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LHS) <-> 0b0010111 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LHS) <-> 0b0010111 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LHS)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LHS)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
     
@@ -1061,7 +1071,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LHS)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_LHS)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LHS)
   <-> "lhs" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
@@ -1077,9 +1087,9 @@ Note that capenter does not store the full calling context. It is the
 responsibility of the caller to store the calling context
 */
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)   <-> 0b0100000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)   <-> 0b0100000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
     let cur_npc = nextPC; /* PC address for resuming execution */
     let cur_sp = x2; /* current stack pointer */
 
@@ -1101,7 +1111,7 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)
   <-> "capenter" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
@@ -1115,9 +1125,9 @@ mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPENTER)
   Note that the capexit instruction does not restore the full context.
 */
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)   <-> 0b0100001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)   <-> 0b0100001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
     if not(capstone_in_secure_world()) | capstone_call(rd, rs1, rs2, CAPSTONE_CALL_CAPEXIT) != RETIRE_SUCCESS then {
         handle_illegal();
         RETIRE_FAIL
@@ -1134,16 +1144,16 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXIT)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)
   <-> "capexit" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
 /* TODO: capexitseal is similar to capexit, but seals the */
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXITSEAL)   <-> 0b0100010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXITSEAL)   <-> 0b0100010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXITSEAL)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXITSEAL)) = {
     if not(capstone_in_secure_world()) | capstone_call(rd, rs1, rs2, CAPSTONE_CALL_CAPEXITSEAL) != RETIRE_SUCCESS then {
         handle_illegal();
         RETIRE_FAIL
@@ -1165,9 +1175,9 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPEXITSEAL)) = {
 
 /* capget generates the genesis capability for the whole secure memory */
 
-mapping clause encdec = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPGET)   <-> 0b0011110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPGET)   <-> 0b0011110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPGET)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPGET)) = {
     let rd_v : regtype = X(rd);
 
     if not(capstone_in_normal_world()) & not(capget_executed) then {
@@ -1184,6 +1194,34 @@ function clause execute (CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPGET)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN(rs2, rs1, rd, CAPSTONE_CAPGET)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPGET)
   <-> "capget" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSET) <-> imm @ rs1 @ 0b011 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSET)) = {
+    let rd_v : regtype = X(rd);
+    let rs1_v : regtype = X(rs1);
+    let imm_v : xlenbits = EXTS(imm);
+
+    match(rs1_v) {
+        CapVal(c) => {
+            let new_cursor = cap_cursor(c) + imm_v;
+            X(rd) = CapVal(cap_set_cursor(c, new_cursor));
+            reg_overwrite(rd_v);
+            X(rs1) = reg_moved(rs1_v);
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSET)
+  <-> "cincoffset" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ hex_bits_12(imm)
 

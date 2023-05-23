@@ -153,7 +153,8 @@ function capstone_sealed_gprs_n(ty: captype_t, size: bits(5)) -> int = {
     match(ty, size == EXTZ(0b0)) {
         (CAP_TYPE_SEALED, _) => unsigned(size),
         (CAP_TYPE_SEALEDRET, true) => 31,
-        (CAP_TYPE_SEALEDRET, false) => 0
+        (CAP_TYPE_SEALEDRET, false) => 0,
+        _ => 0
     }
 }
 

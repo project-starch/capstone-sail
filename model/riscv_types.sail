@@ -420,7 +420,7 @@ enum biop_zbs = {RISCV_BCLRI, RISCV_BEXTI, RISCV_BINVI, RISCV_BSETI}
 
 enum extop_zbb = {RISCV_SEXTB, RISCV_SEXTH, RISCV_ZEXTH}
 
-enum capstone_op = {
+enum capstone_op_r = {
     /* Back door instructions*/
     CAPSTONE_CAPCREATE, CAPSTONE_CAPTYPE, CAPSTONE_CAPNODE,
     CAPSTONE_CAPPERM, CAPSTONE_CAPBOUND, CAPSTONE_CAPPRINT,
@@ -440,6 +440,10 @@ enum capstone_op = {
     /* TransCapstone only */
     CAPSTONE_CAPENTER, CAPSTONE_CAPEXIT, CAPSTONE_CAPEXITSEAL,
     CAPSTONE_CAPGET /* instruction for obtaining the initial capability */}
+  
+enum capstone_op_i = {
+  CAPSTONE_CINCOFFSET
+}
 
 enum capstone_calltype = {
     CAPSTONE_CALL_NORMAL, CAPSTONE_CALL_RETURN,
