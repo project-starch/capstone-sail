@@ -1,0 +1,13 @@
+BootStrap: docker
+From: ubuntu:22.04
+
+%files 
+    c_emulator/riscv_sim_RV64 /sail/sail
+
+%environment
+    export PATH=/sail:$PATH
+
+%runscript
+    #!/bin/bash
+    sail $@
+    
