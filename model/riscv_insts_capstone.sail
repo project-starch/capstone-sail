@@ -1212,7 +1212,7 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSET)) = {
             let new_cursor = cap_cursor(c) + imm_v;
             X(rd) = CapVal(cap_set_cursor(c, new_cursor));
             reg_overwrite(rd_v);
-            X(rs1) = reg_moved(rs1_v);
+            if rs1 != rd then X(rs1) = reg_moved(rs1_v); /* only when the source register is not simultaneously written */
             RETIRE_SUCCESS
         },
         _ => {
