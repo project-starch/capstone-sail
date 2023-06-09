@@ -3,7 +3,7 @@
 set -e
 
 # Build the C emulator
-make csim # TODO: containerise
+make csim SAIL_DIR="$SAIL_DIR" # TODO: containerise
 
 # Build package
 apptainer/build-package.sh
