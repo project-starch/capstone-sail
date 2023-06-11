@@ -382,12 +382,12 @@ void check_elf(bool is32bit)
     }
   }
 }
-uint64_t load_sail(char *f)
+uint64_t load_sail(char *f, uint64_t* cap_relocs_base, int* cap_relocs_count)
 {
   bool is32bit;
   uint64_t entry;
   uint64_t begin_sig, end_sig;
-  load_elf(f, &is32bit, &entry);
+  load_elf(f, &is32bit, &entry, cap_relocs_base, cap_relocs_count);
   check_elf(is32bit);
   fprintf(stdout, "ELF Entry @ 0x%" PRIx64 "\n", entry);
   /* locate htif ports */
@@ -540,7 +540,7 @@ void preinit_sail()
   model_init();
 }
 
-void init_sail(uint64_t elf_entry)
+void init_sail(uint64_t elf_entry, uint64_t cap_relocs_base, int cap_relocs_count)
 {
   zinit_model(UNIT);
 #ifdef RVFI_DII
@@ -558,16 +558,19 @@ void init_sail(uint64_t elf_entry)
 #endif
   init_sail_reset_vector(elf_entry);
 
+  zwX_xlenbits(12, cap_relocs_base);
+  zwX_xlenbits(13, cap_relocs_count);
+
   // this is probably unnecessary now; remove
   if (!rv_enable_rvc) z_set_Misa_C(&zmisa, 0);
 }
 
 /* reinitialize to clear state and memory, typically across tests runs */
-void reinit_sail(uint64_t elf_entry)
+void reinit_sail(uint64_t elf_entry, uint64_t cap_relocs_base, int cap_relocs_count)
 {
   model_fini();
   model_init();
-  init_sail(elf_entry);
+  init_sail(elf_entry, cap_relocs_base, cap_relocs_count);
 }
 
 int init_check(struct tv_spike_t *s)
@@ -992,6 +995,8 @@ int main(int argc, char **argv)
     exit(1);
   }
 
+  uint64_t cap_relocs_base = 0;
+  int cap_relocs_count = 0;
 #ifdef RVFI_DII
   uint64_t entry;
   if (rvfi_dii) {
@@ -1047,16 +1052,19 @@ int main(int argc, char **argv)
     }
     printf("Connected\n");
   } else
-    entry = load_sail(file);
+    entry = load_sail(file, &cap_relocs_base, &cap_relocs_count);
 #else
-  uint64_t entry = load_sail(file);
+  uint64_t entry = load_sail(file, &cap_relocs_base, &cap_relocs_count);
 #endif
+
+  fprintf(stderr, "Cap reloc table base address= %llx, len = %d\n",
+          cap_relocs_base, cap_relocs_count);
 
   /* initialize spike before sail so that we can access the device-tree blob,
    * until we roll our own.
    */
   init_spike(file, entry, rv_ram_size);
-  init_sail(entry);
+  init_sail(entry, cap_relocs_base, cap_relocs_count);
 
   if (!init_check(s)) finish(1);
 
@@ -1072,7 +1080,7 @@ int main(int argc, char **argv)
 #else
     if (rvfi_dii) {
       /* Reset for next test */
-      reinit_sail(entry);
+      reinit_sail(entry, cap_relocs_base, cap_relocs_count);
     }
   } while (rvfi_dii);
 #endif

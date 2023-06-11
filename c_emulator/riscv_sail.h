@@ -21,6 +21,8 @@ unit z_set_Misa_C(struct zMisa*, mach_bits);
 unit z_set_Misa_D(struct zMisa*, mach_bits);
 unit z_set_Misa_F(struct zMisa*, mach_bits);
 
+unit zwX_xlenbits(mach_bits, mach_bits);
+
 #ifdef RVFI_DII
 unit zext_rvfi_init(unit);
 unit zrvfi_set_instr_packet(mach_bits);
