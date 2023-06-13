@@ -433,6 +433,7 @@ enum capstone_op_r = {
     CAPSTONE_SCC, CAPSTONE_LCC, CAPSTONE_SPLIT, CAPSTONE_SEAL,
     CAPSTONE_MOVC, CAPSTONE_MREV, CAPSTONE_JMP, CAPSTONE_JNZ,
     CAPSTONE_INIT, CAPSTONE_DROPI,
+    CAPSTONE_CINCOFFSET,
     /* Load/store instructions of different types/widths */
     CAPSTONE_LWC, CAPSTONE_SWC, CAPSTONE_LWS,
     CAPSTONE_L16S, CAPSTONE_L32S, CAPSTONE_S16S, CAPSTONE_S32S,
@@ -442,7 +443,7 @@ enum capstone_op_r = {
     CAPSTONE_CAPGET /* instruction for obtaining the initial capability */}
   
 enum capstone_op_i = {
-  CAPSTONE_CINCOFFSET
+  CAPSTONE_CINCOFFSETIMM
 }
 
 enum capstone_calltype = {

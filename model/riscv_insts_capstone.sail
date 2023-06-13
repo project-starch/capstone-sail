@@ -1200,9 +1200,9 @@ mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPGET)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSET) <-> imm @ rs1 @ 0b011 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSETIMM) <-> imm @ rs1 @ 0b011 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSET)) = {
+function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSETIMM)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     let imm_v : xlenbits = EXTS(imm);
@@ -1222,6 +1222,31 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSET)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSET)
-  <-> "cincoffset" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ hex_bits_12(imm)
+mapping clause assembly = CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSETIMM)
+  <-> "cincoffsetimm" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ hex_bits_12(imm)
 
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CINCOFFSET)   <-> 0b0100000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CINCOFFSET)) = {
+    let rd_v : regtype = X(rd);
+    let rs1_v : regtype = X(rs1);
+    let rs2_v : regtype = X(rs2);
+    match (rs1_v, rs2_v) {
+        (CapVal(c), RawVal(offset)) => {
+            let new_cursor = cap_cursor(c) + offset;
+            X(rd) = CapVal(cap_set_cursor(c, new_cursor));
+            reg_overwrite(rd_v);
+            if rs1 != rd then X(rs1) = reg_moved(rs1_v); /* only when the source register is not simultaneously written */
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CINCOFFSET)
+  <-> "cincoffset" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
