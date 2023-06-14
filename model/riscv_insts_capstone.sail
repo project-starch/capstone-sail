@@ -115,31 +115,6 @@ mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPBOUND)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPBOUND)   <-> 0b0001001 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
-
-function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPBOUND)) = {
-    let rd_v : regtype = X(rd);
-    let rs1_v : regtype = X(rs1);
-    let rs2_v : regtype = X(rs2);
-    match((rs1_v, rs2_v, rd_v)) {
-        (RawVal(v1), RawVal(v2), CapVal(cv)) => {
-            X(rd) = CapVal(cap_set_bound(cv, v1, v2));
-            RETIRE_SUCCESS
-        },
-        _ => {
-            // invalid operands
-            handle_illegal();
-            RETIRE_FAIL
-        }
-    }
-}
-
-mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPBOUND)
-  <-> "capbound" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
-
-
-/************************************************************/
-
 mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPPRINT)   <-> 0b0001010 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPPRINT)) = {
@@ -784,21 +759,21 @@ mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LWS)
 mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SWC)   <-> 0b0001111 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SWC)) = {
+    let rs2_v : regtype = X(rs2);
     let rs1_v : regtype = X(rs1);
-    let rd_v : regtype = X(rd);
 
-    match(rd_v) {
+    match(rs1_v) {
         CapVal(c) if cap_access_allowed(c, 16, CAP_PERM_RW)
                 & capnode_query(cap_nodeid(c)) == 0b1 => {
             let addr = cap_cursor(c);
             mem_overwrite(addr, to_bits(xlen_val, 16));
-            assert(capstone_store_mem(addr, 16, rs1_v));
-            X(rs1) = reg_moved(rs1_v);
+            assert(capstone_store_mem(addr, 16, rs2_v));
+            X(rs2) = reg_moved(rs2_v);
             if cap_type(c) == CAP_TYPE_UNINIT then {
                 /* if the capability is uninitialized, then we
                 need to increment the cursor by the size of the
                 data being stored (16 bytes in this case) */
-                X(rd) = CapVal(cap_set_cursor(c, addr + 16));
+                X(rs1) = CapVal(cap_set_cursor(c, addr + 16));
             };
             RETIRE_SUCCESS
         },
@@ -887,21 +862,21 @@ mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_L32S)
 mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_S16S) <-> 0b0011010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_S16S)) = {
+    let rs2_v : regtype = X(rs2);
     let rs1_v : regtype = X(rs1);
-    let rd_v : regtype = X(rd);
 
-    match(rd_v) {
+    match(rs1_v) {
         CapVal(c) if cap_access_allowed(c, 2, CAP_PERM_RW)
                 & capnode_query(cap_nodeid(c)) == 0b1 => {
             let addr = cap_cursor(c);
             mem_overwrite(addr, to_bits(xlen_val, 2));
-            assert(capstone_store_mem(addr, 2, rs1_v));
-            X(rs1) = reg_moved(rs1_v);
+            assert(capstone_store_mem(addr, 2, rs2_v));
+            X(rs2) = reg_moved(rs2_v);
             if cap_type(c) == CAP_TYPE_UNINIT then {
                 /* if the capability is uninitialized, then we
                 need to increment the cursor by the size of the
                 data being stored (2 bytes in this case) */
-                X(rd) = CapVal(cap_set_cursor(c, addr + 2));
+                X(rs1) = CapVal(cap_set_cursor(c, addr + 2));
             };
             RETIRE_SUCCESS
         },
@@ -920,21 +895,21 @@ mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_S16S)
 mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_S32S) <-> 0b0011011 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_S32S)) = {
+    let rs2_v : regtype = X(rs2);
     let rs1_v : regtype = X(rs1);
-    let rd_v : regtype = X(rd);
 
-    match(rd_v) {
+    match(rs1_v) {
         CapVal(c) if cap_access_allowed(c, 4, CAP_PERM_RW)
                 & capnode_query(cap_nodeid(c)) == 0b1 => {
             let addr = cap_cursor(c);
             mem_overwrite(addr, to_bits(xlen_val, 4));
-            assert(capstone_store_mem(addr, 4, rs1_v));
-            X(rs1) = reg_moved(rs1_v);
+            assert(capstone_store_mem(addr, 4, rs2_v));
+            X(rs2) = reg_moved(rs2_v);
             if cap_type(c) == CAP_TYPE_UNINIT then {
                 /* if the capability is uninitialized, then we
                 need to increment the cursor by the size of the
                 data being stored (4 bytes in this case) */
-                X(rd) = CapVal(cap_set_cursor(c, addr + 4));
+                X(rs1) = CapVal(cap_set_cursor(c, addr + 4));
             };
             RETIRE_SUCCESS
         },
@@ -953,21 +928,21 @@ mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_S32S)
 mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SHS) <-> 0b0011100 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SHS)) = {
+    let rs2_v : regtype = X(rs2);
     let rs1_v : regtype = X(rs1);
-    let rd_v : regtype = X(rd);
 
-    match(rd_v) {
+    match(rs1_v) {
         CapVal(c) if cap_access_allowed(c, 8, CAP_PERM_RW)
                 & capnode_query(cap_nodeid(c)) == 0b1 => {
             let addr = cap_cursor(c);
             mem_overwrite(addr, to_bits(xlen_val, 8));
-            assert(capstone_store_mem(addr, 8, rs1_v));
-            X(rs1) = reg_moved(rs1_v);
+            assert(capstone_store_mem(addr, 8, rs2_v));
+            X(rs2) = reg_moved(rs2_v);
             if cap_type(c) == CAP_TYPE_UNINIT then {
                 /* if the capability is uninitialized, then we
                 need to increment the cursor by the size of the
                 data being stored (8 bytes in this case) */
-                X(rd) = CapVal(cap_set_cursor(c, addr + 8));
+                X(rs1) = CapVal(cap_set_cursor(c, addr + 8));
             };
             RETIRE_SUCCESS
         },
@@ -986,21 +961,21 @@ mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SHS)
 mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SBS) <-> 0b0011101 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SBS)) = {
+    let rs2_v : regtype = X(rs2);
     let rs1_v : regtype = X(rs1);
-    let rd_v : regtype = X(rd);
 
-    match(rd_v) {
+    match(rs1_v) {
         CapVal(c) if cap_access_allowed(c, 1, CAP_PERM_RW)
                 & capnode_query(cap_nodeid(c)) == 0b1 => {
             let addr = cap_cursor(c);
             mem_overwrite(addr, to_bits(xlen_val, 1));
-            assert(capstone_store_mem(addr, 1, rs1_v));
-            X(rs1) = reg_moved(rs1_v);
+            assert(capstone_store_mem(addr, 1, rs2_v));
+            X(rs2) = reg_moved(rs2_v);
             if cap_type(c) == CAP_TYPE_UNINIT then {
                 /* if the capability is uninitialized, then we
                 need to increment the cursor by the size of the
                 data being stored (1 bytes in this case) */
-                X(rd) = CapVal(cap_set_cursor(c, addr + 1));
+                X(rs1) = CapVal(cap_set_cursor(c, addr + 1));
             };
             RETIRE_SUCCESS
         },
@@ -1227,7 +1202,7 @@ mapping clause assembly = CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSETIMM)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CINCOFFSET)   <-> 0b0100000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CINCOFFSET)   <-> 0b0100010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CINCOFFSET)) = {
     let rd_v : regtype = X(rd);
