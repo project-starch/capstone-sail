@@ -382,7 +382,8 @@ void check_elf(bool is32bit)
     }
   }
 }
-uint64_t load_sail(char *f, uint64_t* cap_relocs_base, int* cap_relocs_count)
+uint64_t load_sail(char *f, uint64_t* cap_relocs_base,
+                  int* cap_relocs_count, uint64_t* cap_table_size)
 {
   bool is32bit;
   uint64_t entry;
@@ -391,24 +392,27 @@ uint64_t load_sail(char *f, uint64_t* cap_relocs_base, int* cap_relocs_count)
   check_elf(is32bit);
   fprintf(stdout, "ELF Entry @ 0x%" PRIx64 "\n", entry);
   /* locate htif ports */
-  if (lookup_sym(f, "tohost", &rv_htif_tohost) < 0) {
+  if (lookup_sym(f, "tohost", &rv_htif_tohost, NULL) < 0) {
     /* tohost port is mandatory */
     fprintf(stderr, "Unable to locate htif tohost port.\n");
     exit(1);
   }
-  if (lookup_sym(f, "fromhost", &rv_htif_fromhost) < 0) {
+  if (lookup_sym(f, "fromhost", &rv_htif_fromhost, NULL) < 0) {
     /* fromhost port is optional */
     rv_htif_fromhost = 0;
   }
   fprintf(stderr, "tohost located at 0x%0" PRIx64 "\n", rv_htif_tohost);
   /* locate test-signature locations if any */
-  if (!lookup_sym(f, "begin_signature", &begin_sig)) {
+  if (!lookup_sym(f, "begin_signature", &begin_sig, NULL)) {
     fprintf(stdout, "begin_signature: 0x%0" PRIx64 "\n", begin_sig);
     mem_sig_start = begin_sig;
   }
-  if (!lookup_sym(f, "end_signature", &end_sig)) {
+  if (!lookup_sym(f, "end_signature", &end_sig, NULL)) {
     fprintf(stdout, "end_signature: 0x%0" PRIx64 "\n", end_sig);
     mem_sig_end = end_sig;
+  }
+  if (lookup_sym(f, "_CHERI_CAPABILITY_TABLE_", NULL, cap_table_size)) {
+    *cap_table_size = 0;
   }
   return entry;
 }
@@ -540,7 +544,8 @@ void preinit_sail()
   model_init();
 }
 
-void init_sail(uint64_t elf_entry, uint64_t cap_relocs_base, int cap_relocs_count)
+void init_sail(uint64_t elf_entry, uint64_t cap_relocs_base,
+               int cap_relocs_count, uint64_t cap_table_size)
 {
   zinit_model(UNIT);
 #ifdef RVFI_DII
@@ -560,17 +565,19 @@ void init_sail(uint64_t elf_entry, uint64_t cap_relocs_base, int cap_relocs_coun
 
   zwX_xlenbits(12, cap_relocs_base);
   zwX_xlenbits(13, cap_relocs_count);
+  zwX_xlenbits(14, cap_table_size);
 
   // this is probably unnecessary now; remove
   if (!rv_enable_rvc) z_set_Misa_C(&zmisa, 0);
 }
 
 /* reinitialize to clear state and memory, typically across tests runs */
-void reinit_sail(uint64_t elf_entry, uint64_t cap_relocs_base, int cap_relocs_count)
+void reinit_sail(uint64_t elf_entry, uint64_t cap_relocs_base, 
+                 int cap_relocs_count, uint64_t cap_table_size)
 {
   model_fini();
   model_init();
-  init_sail(elf_entry, cap_relocs_base, cap_relocs_count);
+  init_sail(elf_entry, cap_relocs_base, cap_relocs_count, cap_table_size);
 }
 
 int init_check(struct tv_spike_t *s)
@@ -997,6 +1004,7 @@ int main(int argc, char **argv)
 
   uint64_t cap_relocs_base = 0;
   int cap_relocs_count = 0;
+  uint64_t cap_table_size = 0;
 #ifdef RVFI_DII
   uint64_t entry;
   if (rvfi_dii) {
@@ -1052,9 +1060,9 @@ int main(int argc, char **argv)
     }
     printf("Connected\n");
   } else
-    entry = load_sail(file, &cap_relocs_base, &cap_relocs_count);
+    entry = load_sail(file, &cap_relocs_base, &cap_relocs_count, &cap_table_size);
 #else
-  uint64_t entry = load_sail(file, &cap_relocs_base, &cap_relocs_count);
+  uint64_t entry = load_sail(file, &cap_relocs_base, &cap_relocs_count, &cap_table_size);
 #endif
 
   fprintf(stderr, "Cap reloc table base address= %llx, len = %d\n",
@@ -1064,7 +1072,7 @@ int main(int argc, char **argv)
    * until we roll our own.
    */
   init_spike(file, entry, rv_ram_size);
-  init_sail(entry, cap_relocs_base, cap_relocs_count);
+  init_sail(entry, cap_relocs_base, cap_relocs_count, cap_table_size);
 
   if (!init_check(s)) finish(1);
 
@@ -1080,7 +1088,7 @@ int main(int argc, char **argv)
 #else
     if (rvfi_dii) {
       /* Reset for next test */
-      reinit_sail(entry, cap_relocs_base, cap_relocs_count);
+      reinit_sail(entry, cap_relocs_base, cap_relocs_count, cap_table_size);
     }
   } while (rvfi_dii);
 #endif
