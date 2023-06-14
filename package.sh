@@ -3,6 +3,9 @@
 set -e
 
 # Build the C emulator
+if [ -z "$SAIL_DIR" ]; then
+    SAIL_DIR=./sail
+fi
 make csim SAIL_DIR="$SAIL_DIR" # TODO: containerise
 
 # Build package
