@@ -685,21 +685,12 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LWC)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
 
-    print_string("capprint: ", RegStr(rs1_v));
-    match(rs1_v) {
-        CapVal(c) => {
-            print_bits("capquery: ", capnode_query(cap_nodeid(c)));
-        },
-        _ => ()
-    };
-    
     match(rs1_v) {
         CapVal(c) if cap_access_allowed(c, 16, CAP_PERM_RO) &
             capnode_query(cap_nodeid(c)) == 0b1 => {
             /* load data and tag */
             let addr = cap_cursor(c); 
             let v = capstone_load_mem(addr, 16);
-            print_string("loaded value: ", RegStr(v));
             // match(v) {
             //     CapVal(loaded_c) => {
             reg_overwrite(rd_v);
@@ -1067,9 +1058,6 @@ mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)   <-> 0
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
     let cur_npc = nextPC; /* PC address for resuming execution */
     let cur_sp = x2; /* current stack pointer */
-
-    print_bits("capenter in normal world = ", bool_to_bits(capstone_in_normal_world()));
-    print_bits("capenter in secure world = ", bool_to_bits(capstone_in_secure_world()));
 
     if not(capstone_in_normal_world()) | capstone_call(rs1, EXTZ(0b0), EXTZ(0b0), CAPSTONE_CALL_CAPENTER) != RETIRE_SUCCESS
     then {
