@@ -716,7 +716,7 @@ mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LWC)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LWS)   <-> 0b0010011 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LWS)   <-> 0b0010111 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LWS)) = {
     let rs1_v : regtype = X(rs1);
@@ -1009,36 +1009,6 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LBS)) = {
 
 mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LBS)
   <-> "lbs" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
-
-/************************************************************/
-
-mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LHS) <-> 0b0010111 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
-
-function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LHS)) = {
-    let rs1_v : regtype = X(rs1);
-    let rd_v : regtype = X(rd);
-    
-    match(rs1_v) {
-        /* load only 8 bytes as here we only load raw data */
-        CapVal(c) if cap_access_allowed(c, 8, CAP_PERM_RO) &
-                capnode_query(cap_nodeid(c)) == 0b1 => {
-            /* load data and tag */
-            let addr = cap_cursor(c);
-            let v = capstone_load_mem(addr, 8);
-            reg_overwrite(rd_v);
-            X(rd) = v;
-            /* no need to check for linear cap move as only raw data is loaded */
-            RETIRE_SUCCESS
-        },
-        _ => {
-            handle_illegal();
-            RETIRE_FAIL
-        }
-    }
-}
-
-mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_LHS)
-  <-> "lhs" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
