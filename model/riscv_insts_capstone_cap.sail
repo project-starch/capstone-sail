@@ -278,12 +278,20 @@ mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MOVC)   <-> 0b000
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MOVC)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
-    if(rd != rs1) then {
-        reg_overwrite(rd_v); /* the dest register is overwritten */
-        X(rd) = rs1_v;
-        X(rs1) = reg_moved(rs1_v);
-    };
-    RETIRE_SUCCESS
+    match(rs1_v) {
+        CapVal(_) => {
+            if(rd != rs1) then {
+                reg_overwrite(rd_v); /* the dest register is overwritten */
+                X(rd) = rs1_v;
+                X(rs1) = reg_moved(rs1_v);
+            };
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
 }
 
 mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MOVC)

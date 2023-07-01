@@ -41,6 +41,8 @@ OCAML_SIM=../ocaml_emulator/riscv_ocaml_sim_RV64
 C_SIM=../c_emulator/riscv_sim_RV64
 TIMEOUT?=10
 
+VIEW_HEAD?=0
+
 .PHONY: all clean run-c run-ocaml $(RUN_C) $(RUN_OCAML) $(DEBUG_TARGETS) list
 
 all: $(TARGETS)
@@ -50,7 +52,11 @@ run-c: $(RUN_C)
 run-ocaml: $(RUN_OCAML)
 
 $(RUN_C):run-c-%:build/%
+ifeq ($(VIEW_HEAD),1)
+	timeout $(TIMEOUT) $(C_SIM) $(C_SIM_FLAGS) $^ 2>&1 | head -n 1000
+else
 	timeout $(TIMEOUT) $(C_SIM) $(C_SIM_FLAGS) $^
+endif
 
 $(RUN_OCAML):run-ocaml-%:build/%
 	$(OCAML_SIM) $^
