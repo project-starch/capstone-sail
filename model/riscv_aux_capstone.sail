@@ -179,24 +179,18 @@ function capstone_sealed_gprs_n(ty: captype_t, size: bits(5)) -> int = {
 function capstone_call(rd: bits(5), rs1: bits(5), rs2: bits(5), calltype: capstone_calltype) -> Retired = {
     let rs1_v : regtype = X(rs1);
     let rs2_v : xlenbits = X(rs2);
-    let rd_v : regtype = X(rd);
 
-    let rd_v_moved = reg_moved(rd_v);
     let rs1_v_moved = reg_moved(rs1_v);
 
     if calltype == CAPSTONE_CALL_CAPEXIT then {
         /* no need to do anything for capexit */
         RETIRE_SUCCESS
-    } else if(calltype != CAPSTONE_CALL_ASYNCEXIT & rs1 == rd) then {
-        /* we do not allow the two operands to be the same */
-        handle_illegal();
-        RETIRE_FAIL
     } else {
         let tv = if calltype == CAPSTONE_CALL_ASYNCEXIT then
             CapVal(switch_buffer_cap)
         else
-            rd_v;
-        match(rd_v) {
+            rs1_v;
+        match(rs1_v) {
             CapVal(c) if capnode_query(cap_nodeid(c)) == 0b1
                 & capstone_calltype_match(calltype, cap_type(c)) /* calltype and cap type must match */
                     /* no need to check the size */
@@ -272,7 +266,7 @@ function capstone_call(rd: bits(5), rs1: bits(5), rs2: bits(5), calltype: capsto
                         let n_gprs_to_store : int = if out_valid then capstone_sealed_gprs_n(out_type, out_size) else 0;
 
                         reg_idx : int = 3; /* skipping x0, x1 (ra), and x2 (sp) */
-                        /* for now we are making this straightforward */
+                        /* for now we are making this straightforwars1 */
                         /* TODO: offset */
                         while reg_idx < 32 do {
                             let reg_idx_bits = to_bits(5, reg_idx);
@@ -301,7 +295,7 @@ function capstone_call(rd: bits(5), rs1: bits(5), rs2: bits(5), calltype: capsto
                             /* if we want a valid sealed capability in ra, the capability will reside in ra */
                             /* NOTE: for capenter, the ra will be placed in a special register */
                             /* TODO: check if it is okay to ignore n_gprs_to_load at this point */
-                            X(1) = rd_v;
+                            X(1) = rs1_v;
                         } else if n_gprs_to_load == 31 then {
                             /* need to load ra from memory */
                             X(1) = capstone_load_mem(cur_addr, caplen_bytes_v);
