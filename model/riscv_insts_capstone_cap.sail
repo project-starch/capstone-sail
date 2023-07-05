@@ -199,10 +199,21 @@ mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SEAL)   <-> 0b000
 
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SEAL)) = {
     let rd_v : regtype = X(rd);
-    match(rd_v) {
-        CapVal(c) if cap_type(c) == CAP_TYPE_LIN => {
-            X(rd) = CapVal(cap_set_type(c, CAP_TYPE_SEALED));
-            RETIRE_SUCCESS
+    let rs1_v : regtype = X(rs1);
+
+    match(rd_v, rs1_v) {
+        (CapVal(c), RawVal(v)) if cap_type(c) == CAP_TYPE_LIN => {
+            let (_, node_id, metadata) = decode_cap(c);
+            match metadata {
+                CommonCapMetadata(_, base_addr, _, _) => {
+                    X(rd) = CapVal(encode_cap((CAP_TYPE_SEALED, node_id, SealedCapMetadata(base_addr, v[4..0]))));
+                    RETIRE_SUCCESS
+                },
+                _ => {
+                    handle_illegal();
+                    RETIRE_FAIL
+                }
+            }
         },
         _ => {
             handle_illegal();
