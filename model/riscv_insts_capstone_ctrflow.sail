@@ -2,7 +2,43 @@
 
 mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)   <-> 0b0100000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)) = capstone_call(rd, rs1, rs2, CAPSTONE_CALL_NORMAL)
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)) = {
+    let cur_pc_cap = PCCap;
+    let cur_npc = nextPC; /* PC address for resuming execution */    
+    let cur_sp = x2; /* current stack pointer */
+
+    let rs1_v : regtype = X(rs1);
+
+    match (rs1_v, capstone_in_secure_world()) {
+        (CapVal(c), true) if capstone_cap_is_valid(c) => {
+            let (ty, node_id, metadata) = decode_cap(c);
+            match metadata {
+                SealedCapMetadata(base_addr, size) => {
+                    /* load the context */
+                    capstone_redirect(capstone_load_mem(base_addr, caplen_bytes_v));
+                    capstone_load_mem_n(base_addr, 1, unsigned(size));
+                    
+                    /* store old PC and SP */
+                    assert(capstone_store_mem(base_addr, caplen_bytes_v, CapVal(cap_set_cursor(cur_pc_cap, cur_npc))));
+                    assert(capstone_store_mem(base_addr + caplen_bytes_v, caplen_bytes_v, cur_sp));
+
+                    /* generate cra */
+                    x1 = CapVal(encode_cap((CAP_TYPE_SEALED, node_id, SealedRetCapMetadata(base_addr, size, rs1))));
+
+                    RETIRE_SUCCESS
+                },
+                _ => {
+                    handle_illegal();
+                    RETIRE_FAIL
+                }
+            }
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
 
 mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)
   <-> "call" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
@@ -12,7 +48,58 @@ mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)
 
 mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)   <-> 0b0100001 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = capstone_call(rd, rs1, rs2, CAPSTONE_CALL_RETURN)
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = {
+    let cur_pc_cap = PCCap;
+    let cur_npc = nextPC; /* PC address for resuming execution */
+    let cur_sp = x2; /* current stack pointer */
+
+    let rs1_v : regtype = X(rs1);
+    let rs2_v : regtype = X(rs2);
+
+    match (rs1_v, rs2_v, capstone_in_secure_world()) {
+        (CapVal(c), RawVal(v), true) if capstone_cap_is_valid(c) => {
+            let (ty, node_id, metadata) = decode_cap(c);
+            match metadata {
+                SealedRetCapMetadata(base_addr, size, reg) => {
+                    capstone_redirect(capstone_load_mem(base_addr, caplen_bytes_v));
+
+                    if unsigned(size) == 0 then {
+                        /* asynchronous scenario */
+                        /* need to load full context */
+                        /* store size GPR values */
+
+                        capstone_swap_mem_n(base_addr, 1, unsigned(size));
+                        capstone_load_mem_n(base_addr, unsigned(size) + 1, 31 - unsigned(size));
+
+                    } else {
+                        /* synchronous scenario */
+                        /* just load SP */
+                        /* store size GPR values */
+                        let new_sp = capstone_load_mem(base_addr + caplen_bytes_v, caplen_bytes_v);
+                        capstone_store_mem_n(base_addr, 1, unsigned(size));
+                        x2 = new_sp;
+                    };
+
+                    /* store the old PC */
+                    assert(capstone_store_mem(base_addr + caplen_bytes_v, caplen_bytes_v, CapVal(cap_set_cursor(cur_pc_cap, cur_npc))));
+
+                    /* generate cra */
+                    x1 = CapVal(encode_cap((CAP_TYPE_SEALED, node_id, SealedCapMetadata(base_addr, size))));
+
+                    RETIRE_SUCCESS
+                },
+                _ => {
+                    handle_illegal();
+                    RETIRE_FAIL
+                }
+            }
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
 
 mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)
   <-> "return" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
@@ -30,7 +117,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JMP)) = {
         CapVal(c) => {
             reg_overwrite(CapVal(PCCap));
             X(rs1) = reg_moved(rs1_v);
-            redirect_to_cap(c);
+            capstone_redirect_to_cap(c);
             RETIRE_SUCCESS
         },
         _ => {
@@ -57,7 +144,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JNZ)) = {
             if(v != EXTZ(0b0)) then {
                 reg_overwrite(CapVal(PCCap));
                 X(rs1) = reg_moved(rs1_v);
-                redirect_to_cap(c);
+                capstone_redirect_to_cap(c);
             };
             RETIRE_SUCCESS
         },
@@ -90,19 +177,41 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
     let cur_npc = nextPC; /* PC address for resuming execution */
     let cur_sp = x2; /* current stack pointer */
 
-    if not(capstone_in_normal_world()) | capstone_call(rs1, EXTZ(0b0), EXTZ(0b0), CAPSTONE_CALL_CAPENTER) != RETIRE_SUCCESS
-    then {
-        handle_illegal();
-        RETIRE_FAIL
-    } else {
-        /* store the PC and stack pointer in special registers */
-        normal_npc = cur_npc;
-        normal_sp = cur_sp;
-        /* set the CPU mode to secure world */
-        capstone_enter_secure_world();
+    let rs1_v : regtype = X(rs1);
 
-        RETIRE_SUCCESS
+    match (rs1_v, capstone_in_normal_world()) {
+        (CapVal(c), true) if capstone_cap_is_valid(c) => {
+            /* store the PC and stack pointer in special registers */
+
+            let (ty, _, metadata) = decode_cap(c);
+
+            match(metadata) {
+                SealedCapMetadata(base_addr, size) => {
+                    let npc = capstone_load_mem(base_addr, caplen_bytes_v);
+                    capstone_load_mem_n(base_addr, 1, unsigned(size));
+                    normal_npc = cur_npc;
+                    normal_sp = cur_sp;
+                    switch_buffer_cap = c;
+                    switch_reg = rs1;
+                    x1 = CapVal(cap_build_exit());
+
+                    /* set the CPU mode to secure world */
+                    capstone_enter_secure_world();
+                    
+                    RETIRE_SUCCESS
+                },
+                _ => {
+                    handle_illegal();
+                    RETIRE_FAIL
+                }
+            }
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
     }
+
 }
 
 mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)
@@ -122,44 +231,42 @@ mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)
 mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)   <-> 0b0100101 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
-    if not(capstone_in_secure_world()) | capstone_call(rd, rs1, rs2, CAPSTONE_CALL_CAPEXIT) != RETIRE_SUCCESS then {
-        handle_illegal();
-        RETIRE_FAIL
-    } else {
-        /* recover the PC and stack pointer from the special registers */
-        nextPC = normal_npc;
-        let x2_v : regtype = x2;
-        x2 = normal_sp;
-        reg_overwrite(x2_v); /* the original value in x2 is overwritten */
-        /* set the CPU mode to normal world */
-        capstone_enter_normal_world();
+    let cur_pc_cap = PCCap;
+    let cur_npc = nextPC; /* PC address for resuming execution */    
+    let cur_sp = x2; /* current stack pointer */
 
-        RETIRE_SUCCESS
+    let rs1_v : regtype = X(rs1);
+    let rs2_v : regtype = X(rs2);
+
+    match(rs1_v, rs2_v, capstone_in_secure_world()) {
+        /* TODO: we are not checking the validity of exit capability here for now */
+        (CapVal(c), RawVal(v), true) if capstone_cap_is_valid(c) => {
+            let (ty, _, metadata) = decode_cap(c);
+            match(cap_type(c), metadata) {
+                (CAP_TYPE_EXIT, SealedCapMetadata(base_addr, size)) => {
+                    /* load PC and SP */
+                    capstone_redirect(capstone_load_mem(base_addr, caplen_bytes_v));
+                    capstone_load_mem_n(base_addr, 1, unsigned(size));
+
+                    x2 = cur_sp;
+                    
+                    assert(capstone_store_mem(base_addr, caplen_bytes_v, CapVal(cap_set_cursor(cur_pc_cap, v))));
+                    capstone_store_mem_n(base_addr, 1, unsigned(size));
+
+                    RETIRE_SUCCESS
+                },
+                _ => {
+                    handle_illegal();
+                    RETIRE_FAIL
+                }
+            }
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
     }
 }
 
 mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)
   <-> "capexit" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
-
-/************************************************************/
-
-/* TODO: capexitseal is similar to capexit, but seals the */
-
-mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXITSEAL)   <-> 0b0100110 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
-
-function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXITSEAL)) = {
-    if not(capstone_in_secure_world()) | capstone_call(rd, rs1, rs2, CAPSTONE_CALL_CAPEXITSEAL) != RETIRE_SUCCESS then {
-        handle_illegal();
-        RETIRE_FAIL
-    } else {
-        /* recover the PC and stack pointer from the special registers */
-        nextPC = normal_npc;
-        let x2_v : regtype = x2;
-        x2 = normal_sp;
-        reg_overwrite(x2_v); /* the original value in x2 is overwritten */
-        /* set the CPU mode to normal world */
-        capstone_enter_normal_world();
-
-        RETIRE_SUCCESS
-    }
-}

@@ -49,7 +49,8 @@ enum captype_t = {
     CAP_TYPE_REV,
     CAP_TYPE_UNINIT,
     CAP_TYPE_SEALED,
-    CAP_TYPE_SEALEDRET
+    CAP_TYPE_SEALEDRET,
+    CAP_TYPE_EXIT /* new type for TransCapstone */
 }
 
 
@@ -99,8 +100,10 @@ type capnodeidbits = bits(capnodeidlen)
 union decodedcap_metadata_t = {
     /* cursor, base addr, end addr, permissions */
     CommonCapMetadata : (xlenbits, xlenbits, xlenbits, capperm_t),
-    /* base addr, size/regid*/
-    SealedCapMetadata : (xlenbits, bits(5))
+    /* base addr, size */
+    SealedCapMetadata : (xlenbits, bits(5)),
+    /* base addr, size, regid */
+    SealedRetCapMetadata : (xlenbits, bits(5), bits(5))
 }
 
 /* cursor, base addr, end addr, permissions, type */
@@ -111,60 +114,70 @@ type decodedcap_t = (captype_t, capnodeidbits, decodedcap_metadata_t)
 function decode_cap(cap: cap_t) -> decodedcap_t = {
     let ni : capnodeidbits @ ty : captypebits @ metadata_bits : bits(94) = cap;
 
-    let metadata = if captype_is_sealed(captype_bits(ty)) then {
-        let _ : bits(25) /* reserved */
-            @ size : bits(5)
-            @ base_addr : xlenbits = metadata_bits;
-        SealedCapMetadata((base_addr, size))
-    } else {
-        let perm : cappermbits @
-            iE : bits(1) @ t : bits(9) @ tE : bits(3) @ b : bits(11) @
-            bE : bits(3) @ cursor : xlenbits = metadata_bits;
+    let metadata : decodedcap_metadata_t = match captype_bits(ty) {
+        CAP_TYPE_SEALED => {
+            let _ : bits(25) /* reserved */
+                @ size : bits(5)
+                @ base_addr : xlenbits = metadata_bits;
+            SealedCapMetadata((base_addr, size))
+        },
+        CAP_TYPE_SEALEDRET => {
+            let _ : bits(20) /* reserved */
+                @ reg : bits(5)
+                @ size : bits(5)
+                @ base_addr : xlenbits = metadata_bits;
+            SealedRetCapMetadata((base_addr, size, reg))
+        }, 
+        _ => {
+            let perm : cappermbits @
+                iE : bits(1) @ t : bits(9) @ tE : bits(3) @ b : bits(11) @
+                bE : bits(3) @ cursor : xlenbits = metadata_bits;
 
-        T : xlenbits = EXTZ(t);
-        T = T << 3;
+            T : xlenbits = EXTZ(t);
+            T = T << 3;
 
-        B : xlenbits = EXTZ(b);
-        B = B << 3;
-        E : xlenbits = EXTZ(0b0);
-        Lmsb = if(iE == 0b0) then {
-            T = T | EXTZ(tE);
-            B = B | EXTZ(bE);
-            0b0
-        } else {
-            E = (EXTZ(tE) : xlenbits << 3) | EXTZ(bE) : xlenbits;
-            0b1
-        };
+            B : xlenbits = EXTZ(b);
+            B = B << 3;
+            E : xlenbits = EXTZ(0b0);
+            Lmsb = if(iE == 0b0) then {
+                T = T | EXTZ(tE);
+                B = B | EXTZ(bE);
+                0b0
+            } else {
+                E = (EXTZ(tE) : xlenbits << 3) | EXTZ(bE) : xlenbits;
+                0b1
+            };
 
-        Lcarry = if(unsigned(T) < unsigned(B[11..0])) then 0b1 else 0b0;
+            Lcarry = if(unsigned(T) < unsigned(B[11..0])) then 0b1 else 0b0;
 
-        T = T | (((B >> 12) + (EXTZ(Lcarry) : xlenbits) + (EXTZ(Lmsb) : xlenbits)) << 12);
+            T = T | (((B >> 12) + (EXTZ(Lcarry) : xlenbits) + (EXTZ(Lmsb) : xlenbits)) << 12);
 
-        top : xlenbits = (cursor & (((EXTS(0b1) : xlenbits) >> (unsigned(E) + 14)) << (unsigned(E) + 14))) | (T << unsigned(E));
-        base : xlenbits = (cursor & (((EXTS(0b1) : xlenbits) >> (unsigned(E) + 14)) << (unsigned(E) + 14))) | (B << unsigned(E));
+            top : xlenbits = (cursor & (((EXTS(0b1) : xlenbits) >> (unsigned(E) + 14)) << (unsigned(E) + 14))) | (T << unsigned(E));
+            base : xlenbits = (cursor & (((EXTS(0b1) : xlenbits) >> (unsigned(E) + 14)) << (unsigned(E) + 14))) | (B << unsigned(E));
 
-        let R : xlenbits = (B >> 11) - (EXTZ(0b1) : xlenbits);
-        let A : xlenbits = (cursor >> (unsigned(E) + 11)) & (EXTZ(0b111) : xlenbits);
-        let T3 : xlenbits = (T >> 11) & (EXTZ(0b111) : xlenbits);
-        let B3 : xlenbits = (B >> 11) & (EXTZ(0b111) : xlenbits);
+            let R : xlenbits = (B >> 11) - (EXTZ(0b1) : xlenbits);
+            let A : xlenbits = (cursor >> (unsigned(E) + 11)) & (EXTZ(0b111) : xlenbits);
+            let T3 : xlenbits = (T >> 11) & (EXTZ(0b111) : xlenbits);
+            let B3 : xlenbits = (B >> 11) & (EXTZ(0b111) : xlenbits);
 
-        let condAR = unsigned(A) < unsigned(R);
-        let condTR = unsigned(T3) < unsigned(R);
-        let condBR = unsigned(B3) < unsigned(R);
+            let condAR = unsigned(A) < unsigned(R);
+            let condTR = unsigned(T3) < unsigned(R);
+            let condBR = unsigned(B3) < unsigned(R);
 
-        if(not(condAR) & condTR) then {
-            top = top + ((EXTZ(0b1) : xlenbits) << (unsigned(E) + 14));
-        } else if(condAR & not(condTR)) then {
-            top = top - ((EXTZ(0b1) : xlenbits) << (unsigned(E) + 14));
-        };
+            if(not(condAR) & condTR) then {
+                top = top + ((EXTZ(0b1) : xlenbits) << (unsigned(E) + 14));
+            } else if(condAR & not(condTR)) then {
+                top = top - ((EXTZ(0b1) : xlenbits) << (unsigned(E) + 14));
+            };
 
-        if(not(condAR) & condBR) then {
-            base = base + ((EXTZ(0b1) : xlenbits) << (unsigned(E) + 14));
-        } else if(condAR & not(condBR)) then {
-            base = base - ((EXTZ(0b1) : xlenbits) << (unsigned(E) + 14));
-        };
+            if(not(condAR) & condBR) then {
+                base = base + ((EXTZ(0b1) : xlenbits) << (unsigned(E) + 14));
+            } else if(condAR & not(condBR)) then {
+                base = base - ((EXTZ(0b1) : xlenbits) << (unsigned(E) + 14));
+            };
 
-        CommonCapMetadata((cursor, base, top, capperm_bits(perm)))
+            CommonCapMetadata((cursor, base, top, capperm_bits(perm)))
+        }
     } in (captype_bits(ty), ni, metadata)
 }
 
@@ -218,9 +231,13 @@ function encode_cap(dcap: decodedcap_t) -> cap_t = {
                 tE[2..0] @ B[10..0] @ bE[2..0] @ cursor
             }
         },
-        SealedCapMetadata(base_addr, size) if captype_is_sealed(ty) => {
+        SealedCapMetadata(base_addr, size) if ty == CAP_TYPE_SEALED => {
             ni @ captype_bits(ty) @ EXTZ(0b0) : bits(25) /* reserved */
                 @ size @ base_addr
+        },
+        SealedRetCapMetadata(base_addr, size, reg) if ty == CAP_TYPE_SEALEDRET => {
+            ni @ captype_bits(ty) @ EXTZ(0b0) : bits(20) /* reserved */
+                @ reg @ size @ base_addr
         },
         _ => {
             EXTZ(0b0)
@@ -243,6 +260,10 @@ function decode_cap_legacy(cap : cap_t) -> decodedcap_legacy_t = {
             (cursor, start_addr, end_addr, ni, perm, ty)
         },
         SealedCapMetadata(base_addr, size) => {
+            (base_addr, base_addr, base_addr + (EXTZ(size) : xlenbits << EXTZ(0x4) : xlenbits),
+                ni, CAP_PERM_NA, ty)
+        },
+        SealedRetCapMetadata(base_addr, size, reg) => {
             (base_addr, base_addr, base_addr + (EXTZ(size) : xlenbits << EXTZ(0x4) : xlenbits),
                 ni, CAP_PERM_NA, ty)
         }
@@ -278,7 +299,9 @@ function cap_set_bound(cap: cap_t, new_start: xlenbits, new_end: xlenbits) -> ca
         CommonCapMetadata(cursor, start_addr, end_addr, perm) =>
             CommonCapMetadata(cursor, new_start, new_end, perm),
         SealedCapMetadata(base_addr, size) =>
-            SealedCapMetadata(new_start, size)
+            SealedCapMetadata(new_start, size),
+        SealedRetCapMetadata(base_addr, size, reg) =>
+            SealedRetCapMetadata(new_start, size, reg)
     };
     encode_cap((ty, ni, new_metadata))
 }
@@ -300,7 +323,9 @@ function cap_set_bound_cursor(cap: cap_t, new_cursor: xlenbits, new_start: xlenb
         CommonCapMetadata(cursor, start_addr, end_addr, perm) =>
             CommonCapMetadata(new_cursor, new_start, new_end, perm),
         SealedCapMetadata(base_addr, size) =>
-            SealedCapMetadata(new_start, size)
+            SealedCapMetadata(new_start, size),
+        SealedRetCapMetadata(base_addr, size, reg) =>
+            SealedRetCapMetadata(new_start, size, reg)
     };
     encode_cap((ty, ni, new_metadata))
 }
@@ -355,7 +380,8 @@ function cap_bounds(cap: cap_t) -> (xlenbits, xlenbits) = {
     let (_, _, metadata) = decode_cap(cap) in
         match(metadata) {
             CommonCapMetadata(_, start_addr, end_addr, _) => (start_addr, end_addr),
-            SealedCapMetadata(base_addr, size) => (base_addr, base_addr + ((EXTZ(size) : xlenbits) << (EXTZ(0x4) : xlenbits)))
+            SealedCapMetadata(base_addr, size) => (base_addr, base_addr + ((EXTZ(size) : xlenbits) << (EXTZ(0x4) : xlenbits))),
+            SealedRetCapMetadata(base_addr, size, reg) => (base_addr, base_addr + ((EXTZ(size) : xlenbits) << (EXTZ(0x4) : xlenbits)))
         }
 }
 
@@ -363,7 +389,8 @@ function cap_bound_size(cap: cap_t) -> xlenbits = {
     let (_, _, metadata) = decode_cap(cap) in
         match(metadata) {
             CommonCapMetadata(_, start_addr, end_addr, _) => end_addr - start_addr,
-            SealedCapMetadata(_, size) => (EXTZ(size) : xlenbits) << (EXTZ(0x4) : xlenbits)
+            SealedCapMetadata(_, size) => (EXTZ(size) : xlenbits) << (EXTZ(0x4) : xlenbits),
+            SealedRetCapMetadata(_, size, _) => (EXTZ(size) : xlenbits) << (EXTZ(0x4) : xlenbits)
         }
 }
 
@@ -396,6 +423,11 @@ function print_cap(s: string, cap: cap_t) -> unit = {
         SealedCapMetadata(base_addr, size) => {
             print_string("Base address = ", BitStr(base_addr));
             print_string("Size = ", BitStr(size));
+        },
+        SealedRetCapMetadata(base_addr, size, reg) => {
+            print_string("Base address = ", BitStr(base_addr));
+            print_string("Size = ", BitStr(size));
+            print_string("RegId = ", BitStr(reg));
         }
     };
     print(")");
@@ -410,7 +442,11 @@ function capmetadata_string(metadata: decodedcap_metadata_t) -> string = {
             "Perm = " ^ capperm_string(perm),
         SealedCapMetadata(base_addr, size) =>
             "Base address = " ^ BitStr(base_addr) ^ sep() ^
-            "Size = " ^ BitStr(size)
+            "Size = " ^ BitStr(size),
+        SealedRetCapMetadata(base_addr, size, reg) =>
+            "Base address = " ^ BitStr(base_addr) ^ sep() ^
+            "Size = " ^ BitStr(size) ^ sep() ^
+            "RegId = " ^ BitStr(reg)
     }
 }
 
@@ -423,3 +459,8 @@ function cap_string(cap: cap_t) -> string = {
 
 // let CAP_INVALID = encode_cap((CAP_TYPE_NONLIN, EXTZ(0b0), CommonCapMetadata(EXTZ(0b0), EXTZ(0b0), EXTZ(0b0), CAP_PERM_NA)))
 let CAP_INVALID : cap_t = EXTZ(0b0)
+
+/* build an exit type capability. TODO: might need to maintain revocation tree */
+function cap_build_exit() -> cap_t = {
+    encode_cap((CAP_TYPE_EXIT, EXTZ(0b0), CommonCapMetadata(EXTZ(0b0), EXTZ(0b0), EXTZ(0b0), CAP_PERM_NA)))
+}

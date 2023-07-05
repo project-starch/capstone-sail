@@ -441,7 +441,7 @@ enum capstone_op_r = {
     CAPSTONE_LDH, CAPSTONE_STH, 
     CAPSTONE_LDB, CAPSTONE_STB,
     /* TransCapstone only */
-    CAPSTONE_CAPENTER, CAPSTONE_CAPEXIT, CAPSTONE_CAPEXITSEAL,
+    CAPSTONE_CAPENTER, CAPSTONE_CAPEXIT,
     CAPSTONE_CAPGET /* instruction for obtaining the initial capability */}
   
 enum capstone_op_i = {
@@ -450,9 +450,7 @@ enum capstone_op_i = {
 
 enum capstone_calltype = {
     CAPSTONE_CALL_NORMAL, CAPSTONE_CALL_RETURN,
-    CAPSTONE_CALL_RETSEAL, 
     CAPSTONE_CALL_CAPENTER, CAPSTONE_CALL_CAPEXIT,
-    CAPSTONE_CALL_CAPEXITSEAL,
     CAPSTONE_CALL_ASYNCEXIT
 }
 
