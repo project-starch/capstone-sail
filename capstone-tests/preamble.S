@@ -40,6 +40,8 @@ _CHERI_CAPABILITY_TABLE_:
 _start:
     # disable world paritioning
     cs.onpartition x0 
+    # disable normal world exception handling
+    cs.onnormaleh x0
     # directly enter secure world
     li a0, 1
     cs.setworld a0

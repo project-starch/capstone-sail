@@ -427,6 +427,7 @@ enum capstone_op_r = {
     CAPSTONE_QUERY, CAPSTONE_ALLOC, CAPSTONE_REV,
     CAPSTONE_RCUPDATE, CAPSTONE_TAGGET, CAPSTONE_TAGSET,
     CAPSTONE_SETWORLD, CAPSTONE_ONPARTITION,
+    CAPSTONE_SETEH, CAPSTONE_ONNORMALEH,
     /* Architectural instructions */
     CAPSTONE_REVOKE, CAPSTONE_SHRINK, CAPSTONE_CALL,
     CAPSTONE_RETURN,
@@ -443,7 +444,8 @@ enum capstone_op_r = {
     CAPSTONE_LDB, CAPSTONE_STB,
     /* TransCapstone only */
     CAPSTONE_CAPENTER, CAPSTONE_CAPEXIT,
-    CAPSTONE_CAPGET /* instruction for obtaining the initial capability */}
+    CAPSTONE_CAPGET /* instruction for obtaining the initial capability */
+}
   
 enum capstone_op_i = {
   CAPSTONE_CINCOFFSETIMM

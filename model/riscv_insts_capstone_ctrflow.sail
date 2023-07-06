@@ -112,10 +112,10 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CJALR)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
 
-    match(rs1_v) {
+    match(rs1_v, capstone_in_secure_world()) {
         /* we don't check the permission or the type here. invalid values will trigger
         faults later */
-        CapVal(c) => {
+        (CapVal(c), true) => {
             let old_pc_cap = PCCap;
             let old_npc = nextPC;
 
@@ -145,8 +145,8 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CBNZ)) = {
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
     
-    match((rs1_v, rs2_v)) {
-        (CapVal(c), RawVal(v)) => {
+    match((rs1_v, rs2_v, capstone_in_secure_world())) {
+        (CapVal(c), RawVal(v), true) => {
             if(v != EXTZ(0b0)) then {
                 reg_overwrite(CapVal(PCCap));
                 X(rs1) = reg_moved(rs1_v);

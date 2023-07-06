@@ -31,9 +31,9 @@ function handle_illegal_in_secure() -> unit = {
                     match ceh_metadata {
                         SealedCapMetadata(ceh_base_addr, ceh_size) => {
                             let cur_pc_cap = PCCap;
-                            let cur_npc = nextPC;
+                            let epc = PC;
 
-                            assert(capstone_store_mem(switch_cap_base, caplen_bytes_v, CapVal(cap_set_cursor(cur_pc_cap, cur_npc))));
+                            assert(capstone_store_mem(switch_cap_base, caplen_bytes_v, CapVal(cap_set_cursor(cur_pc_cap, epc))));
                             capstone_store_mem_n(switch_cap_base, 1, 31);
 
                             let new_switch_cap = encode_cap((CAP_TYPE_SEALEDRET, switch_cap_node_id,
@@ -80,7 +80,7 @@ function handle_illegal_in_secure() -> unit = {
                     match metadata {
                         SealedCapMetadata(base_addr, size) => {
                             let cur_pc_cap = PCCap;
-                            let cur_npc = nextPC;
+                            let epc = PC;
 
                             capstone_redirect(capstone_load_mem(base_addr, caplen_bytes_v));
                             capstone_swap_mem_n(base_addr, 1, unsigned(size));
@@ -88,7 +88,7 @@ function handle_illegal_in_secure() -> unit = {
                             capstone_scrub_reg_n(unsigned(size) + 1, 31 - unsigned(size));
 
                             /* store PC */
-                            assert(capstone_store_mem(base_addr, caplen_bytes_v, CapVal(cap_set_cursor(cur_pc_cap, cur_npc))));
+                            assert(capstone_store_mem(base_addr, caplen_bytes_v, CapVal(cap_set_cursor(cur_pc_cap, epc))));
 
                             /* generate cra */
                             x1 = CapVal(encode_cap((CAP_TYPE_SEALEDRET, node_id, SealedRetCapMetadata(base_addr, size, EXTZ(0b0)))));

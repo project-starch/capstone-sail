@@ -332,3 +332,47 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_ONPARTITION)) = 
 
 mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_ONPARTITION)
   <-> "onpartition" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SETEH)  <-> 0b0001110 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SETEH)) = {
+    let rs1_v : regtype = X(rs1);
+
+    match rs1_v {
+        CapVal(c) => {
+            ceh = CapVal(c);
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SETEH)
+  <-> "seteh" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_ONNORMALEH) <-> 0b0001111 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_ONNORMALEH)) = {
+    let rs1_v : regtype = X(rs1);
+
+    match rs1_v {
+        RawVal(v) => {
+            normalWorldHandling = unsigned(v) != 0;
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_ONNORMALEH)
+  <-> "onnormaleh" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
