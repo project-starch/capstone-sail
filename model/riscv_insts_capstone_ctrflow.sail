@@ -106,18 +106,24 @@ mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JMP)   <-> 0b0100010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CJALR)   <-> 0b0100010 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JMP)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CJALR)) = {
+    let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
-    
+
     match(rs1_v) {
         /* we don't check the permission or the type here. invalid values will trigger
         faults later */
         CapVal(c) => {
-            reg_overwrite(CapVal(PCCap));
+            let old_pc_cap = PCCap;
+            let old_npc = nextPC;
+
+            reg_overwrite(rd_v);
             X(rs1) = reg_moved(rs1_v);
             capstone_redirect_to_cap(c);
+            X(rd) = CapVal(cap_set_cursor(old_pc_cap, old_npc)); /* save the original next PC */
+
             RETIRE_SUCCESS
         },
         _ => {
@@ -127,15 +133,15 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JMP)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JMP)
-  <-> "jmp" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CJALR)
+  <-> "cjalr" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JNZ)   <-> 0b0100011 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CBNZ)   <-> 0b0100011 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JNZ)) = {
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CBNZ)) = {
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
     
@@ -155,8 +161,8 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JNZ)) = {
     }
 }
 
-mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_JNZ)
-  <-> "jnz" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CBNZ)
+  <-> "cbnz" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
 
 /************************************************************/
 
