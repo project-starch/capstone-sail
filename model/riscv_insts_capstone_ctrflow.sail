@@ -23,7 +23,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)) = {
                     assert(capstone_store_mem(base_addr + caplen_bytes_v, caplen_bytes_v, cur_sp));
 
                     /* generate cra */
-                    x1 = CapVal(encode_cap((CAP_TYPE_SEALED, node_id, SealedRetCapMetadata(base_addr, size, rs1))));
+                    x1 = CapVal(encode_cap((CAP_TYPE_SEALEDRET, node_id, SealedRetCapMetadata(base_addr, size, rs1))));
 
                     RETIRE_SUCCESS
                 },
@@ -252,6 +252,9 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
                     
                     assert(capstone_store_mem(base_addr, caplen_bytes_v, CapVal(cap_set_cursor(cur_pc_cap, v))));
                     capstone_store_mem_n(base_addr, 1, unsigned(size));
+
+                    /* set the CPU mode to normal world */
+                    capstone_enter_normal_world();
 
                     RETIRE_SUCCESS
                 },
