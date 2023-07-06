@@ -77,7 +77,9 @@ register nextPC   : xlenbits
 register PCCap    : cap_t
 /* Whether the Capstone world partitioning is enabled. */
 register partitionEnabled : bool = true
-
+/* Whether we want to involve the normal world in the exception handling in the secure world */
+/* TODO: disabled for now */
+register normalWorldHandling : bool = false
 
 /* Machine-mode and supervisor-mode state definitions. */
 

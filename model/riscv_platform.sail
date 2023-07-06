@@ -523,17 +523,6 @@ function tick_platform() -> unit = {
   htif_tick();
 }
 
-/* Platform-specific handling of instruction faults */
-
-function handle_illegal() -> unit = {
-  let info = if plat_mtval_has_illegal_inst_bits ()
-             then Some(instbits)
-             else None();
-  let t : sync_exception = struct { trap    = E_Illegal_Instr(),
-                                    excinfo = info,
-                                    ext     = None() };
-  set_next_pc(exception_handler(cur_privilege, CTL_TRAP(t), PC)) // FIXME: add checks on PC
-}
 
 /* Platform-specific wait-for-interrupt */
 

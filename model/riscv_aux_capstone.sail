@@ -228,6 +228,14 @@ function capstone_swap_mem_n(base_addr: xlenbits, start: int, count: int) -> uni
     }
 }
 
+function capstone_scrub_reg_n(start: int, count: int) -> unit = {
+    reg_idx : int = start;
+    while reg_idx <= count do {
+        X(to_bits(5, reg_idx)) = RawVal(EXTZ(0b0));
+        reg_idx = reg_idx + 1;
+    }
+}
+
 function capstone_gen_genesis() -> cap_t = {
     match(capnode_duplicate(capnode_id_invalid, true)) {
         Some(node_id) => {
