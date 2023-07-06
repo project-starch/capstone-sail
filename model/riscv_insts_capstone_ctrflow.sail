@@ -63,7 +63,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = {
                 SealedRetCapMetadata(base_addr, size, reg) => {
                     capstone_redirect(capstone_load_mem(base_addr, caplen_bytes_v));
 
-                    if unsigned(size) == 0 then {
+                    if unsigned(reg) == 0 then {
                         /* asynchronous scenario */
                         /* need to load full context */
                         /* store size GPR values */
