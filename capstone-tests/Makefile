@@ -5,11 +5,12 @@ TRANSCAPSTONE_ENABLED?=0
 
 ifeq ($(TRANSCAPSTONE_ENABLED),0)
 TESTSUITE_SOURCE_PATH=./testsuite/capstone
+PREAMBLE_FILE=./preamble.S
 else
 TESTSUITE_SOURCE_PATH=./testsuite/transcapstone
+PREAMBLE_FILE=./preamble-transcapstone.S
 endif
 
-PREAMBLE_FILE=./preamble.S
 EPILOGUE_FILE=./epilogue.S
 TRANSFORM_CMD=gawk -f ./transform-testcase.awk
 ASM_SOURCES=$(filter-out $(TESTSUITE_SOURCE_PATH)/exit.S,$(wildcard $(TESTSUITE_SOURCE_PATH)/*.S))
@@ -52,8 +53,8 @@ run-c: $(RUN_C)
 run-ocaml: $(RUN_OCAML)
 
 $(RUN_C):run-c-%:build/%
-ifeq ($(VIEW_HEAD),1)
-	timeout $(TIMEOUT) $(C_SIM) $(C_SIM_FLAGS) $^ 2>&1 | head -n 1000
+ifneq ($(VIEW_HEAD),0)
+	timeout $(TIMEOUT) $(C_SIM) $(C_SIM_FLAGS) $^ 2>&1 | head -n $(VIEW_HEAD)
 else
 	timeout $(TIMEOUT) $(C_SIM) $(C_SIM_FLAGS) $^
 endif

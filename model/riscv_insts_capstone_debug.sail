@@ -279,3 +279,56 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_TAGGET)) = {
 
 mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_TAGGET)
   <-> "tagget" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SETWORLD)   <-> 0b0001100 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SETWORLD)) = {
+    let rs1_v : regtype = X(rs1);
+
+    match(rs1_v) {
+        RawVal(v) => {
+            if unsigned(v) == 0 then {
+                /* enter normal world */
+                PCCap = CAP_INVALID;
+                capstone_enter_normal_world();
+            } else {
+                /* enter secure world */
+                PCCap = encode_cap((CAP_TYPE_NONLIN, EXTZ(0b0),
+                    CommonCapMetadata(EXTZ(0b0), EXTZ(0b0), EXTZ(0x100000000000000), CAP_PERM_RWX)));
+                capstone_enter_secure_world();
+            };
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SETWORLD)
+  <-> "setworld" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)
+
+/************************************************************/
+
+mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_ONPARTITION)   <-> 0b0001101 @ rs2 @ rs1 @ 0b000 @ rd @ 0b1011011
+
+function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_ONPARTITION)) = {
+    let rs1_v : regtype = X(rs1);
+
+    match(rs1_v) {
+        RawVal(v) => {
+            partitionEnabled = unsigned(v) != 0;
+            RETIRE_SUCCESS
+        },
+        _ => {
+            handle_illegal();
+            RETIRE_FAIL
+        }
+    }
+}
+
+mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_ONPARTITION)
+  <-> "onpartition" ^ spc() ^ reg_name(rd) ^ sep() ^ reg_name(rs1) ^ sep() ^ reg_name(rs2)

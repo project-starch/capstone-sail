@@ -8,8 +8,9 @@ type capnodebits = bits(capnodelen)
 let capnode_lim : int = 65536
 
 let capnode_id_invalid : capnodeidbits = ~(EXTZ(0b0) : capnodeidbits)
+let capnode_id_always_valid : capnodeidbits = EXTZ(0b0)
 
-register capnode_n : int = 0
+register capnode_n : int = 1
 /* head of the free list */
 register capnode_free_head : capnodeidbits = capnode_id_invalid
 
@@ -73,7 +74,9 @@ function capnode_write(node_id : capnodeidbits, node : capnode_t) -> bool = {
 }
 
 function capnode_query(node_id : capnodeidbits) -> bits(1) = {
-  let n = capnode_read(node_id) in
+  if node_id == capnode_id_always_valid then
+    0b1
+  else let n = capnode_read(node_id) in
     n.valid
 }
 

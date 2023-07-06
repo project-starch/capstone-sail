@@ -38,11 +38,6 @@ RVTEST_DATA_END
 _CHERI_CAPABILITY_TABLE_:
 .global _start
 _start:
-    # disable world paritioning
-    cs.onpartition x0 
-    # directly enter secure world
-    li a0, 1
-    cs.setworld a0
     call main
 
 .global main

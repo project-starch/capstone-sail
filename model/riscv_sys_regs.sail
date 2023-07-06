@@ -75,6 +75,8 @@ register nextPC   : xlenbits
 
 /* Capability for the PC access. The cursor is not used. */
 register PCCap    : cap_t
+/* Whether the Capstone world partitioning is enabled. */
+register partitionEnabled : bool = true
 
 
 /* Machine-mode and supervisor-mode state definitions. */

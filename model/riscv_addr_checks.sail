@@ -137,10 +137,13 @@ function ext_check_phys_mem_write(write_kind, paddr, size, data, metadata) =
 
 /* check that the physical address falls within the permitted partition */
 function check_phys_addr_in_partition(addr: xlenbits, through_mmu: bool) -> bool = {
-  match(capstone_in_normal_world(), through_mmu) {
-    (true, true) => unsigned(addr) < unsigned(sec_mem_base()),
-    (_, false) => unsigned(addr) >= unsigned(sec_mem_base()) &
-                                     unsigned(addr) < unsigned(rnode_mem_base()),
-    _ => false
-  }
+  if not(partitionEnabled) then
+    true
+  else
+    match(capstone_in_normal_world(), through_mmu) {
+      (true, true) => unsigned(addr) < unsigned(sec_mem_base()),
+      (_, false) => unsigned(addr) >= unsigned(sec_mem_base()) &
+                                      unsigned(addr) < unsigned(rnode_mem_base()),
+      _ => false
+    }
 }
