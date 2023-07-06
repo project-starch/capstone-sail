@@ -3,6 +3,9 @@
 type capnodelen : Int = 128
 type capnodebits = bits(capnodelen)
 
+type capnodeidlen : Int = 31
+let capnodeidlen_v = sizeof(capnodeidlen)
+type capnodeidbits = bits(capnodeidlen)
 
 /* limit to the number of nodes */
 let capnode_lim : int = 65536

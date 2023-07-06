@@ -63,7 +63,8 @@ mapping captype_string : captype_t <-> string = {
     CAP_TYPE_REV <-> "revocation",
     CAP_TYPE_UNINIT <-> "uninitialised",
     CAP_TYPE_SEALED <-> "sealed",
-    CAP_TYPE_SEALEDRET <-> "sealed-return"
+    CAP_TYPE_SEALEDRET <-> "sealed-return",
+    CAP_TYPE_EXIT <-> "exit"
 }
 
 mapping captype_bits : captype_t <-> captypebits = {
@@ -72,7 +73,8 @@ mapping captype_bits : captype_t <-> captypebits = {
     CAP_TYPE_REV <->     0b010,
     CAP_TYPE_UNINIT <->  0b011,
     CAP_TYPE_SEALED <->  0b100,
-    CAP_TYPE_SEALEDRET <-> 0b101
+    CAP_TYPE_SEALEDRET <-> 0b101,
+    CAP_TYPE_EXIT <->   0b110
 }
 
 function captype_grants_access(ty: captype_t, is_write: bool) -> bool = {
@@ -89,12 +91,6 @@ function captype_is_linear(ty: captype_t) -> bool = {
 function captype_is_sealed(ty: captype_t) -> bool = {
     ty == CAP_TYPE_SEALED | ty == CAP_TYPE_SEALEDRET
 }
-
-type capnodeidlen : Int = 31
-let capnodeidlen_v = sizeof(capnodeidlen)
-type capnodeidbits = bits(capnodeidlen)
-
-
 
 /* metadata for decoded capability without type and node id (which are common)*/
 union decodedcap_metadata_t = {
@@ -462,5 +458,5 @@ let CAP_INVALID : cap_t = EXTZ(0b0)
 
 /* build an exit type capability. TODO: might need to maintain revocation tree */
 function cap_build_exit() -> cap_t = {
-    encode_cap((CAP_TYPE_EXIT, EXTZ(0b0), CommonCapMetadata(EXTZ(0b0), EXTZ(0b0), EXTZ(0b0), CAP_PERM_NA)))
+    encode_cap((CAP_TYPE_EXIT, capnode_id_always_valid, CommonCapMetadata(EXTZ(0b0), EXTZ(0b0), EXTZ(0b0), CAP_PERM_NA)))
 }

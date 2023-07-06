@@ -38,6 +38,10 @@ RVTEST_DATA_END
 _CHERI_CAPABILITY_TABLE_:
 .global _start
 _start:
+    # disable world paritioning for now
+    # TODO: consider removing this
+    cs.onpartition x0 
+
     call main
 
 .global main

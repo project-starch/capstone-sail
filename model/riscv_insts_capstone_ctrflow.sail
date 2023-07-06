@@ -187,7 +187,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
 
             match(metadata) {
                 SealedCapMetadata(base_addr, size) => {
-                    let npc = capstone_load_mem(base_addr, caplen_bytes_v);
+                    capstone_redirect(capstone_load_mem(base_addr, caplen_bytes_v));
                     capstone_load_mem_n(base_addr, 1, unsigned(size));
                     normal_npc = cur_npc;
                     normal_sp = cur_sp;
@@ -241,17 +241,17 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
     match(rs1_v, rs2_v, capstone_in_secure_world()) {
         /* TODO: we are not checking the validity of exit capability here for now */
         (CapVal(c), RawVal(v), true) if capstone_cap_is_valid(c) => {
-            let (ty, _, metadata) = decode_cap(c);
+            let (_, _, metadata) = decode_cap(switch_buffer_cap);
             match(cap_type(c), metadata) {
                 (CAP_TYPE_EXIT, SealedCapMetadata(base_addr, size)) => {
                     /* load PC and SP */
-                    capstone_redirect(capstone_load_mem(base_addr, caplen_bytes_v));
-                    capstone_load_mem_n(base_addr, 1, unsigned(size));
-
-                    x2 = cur_sp;
+                    capstone_redirect_to_addr(normal_npc);
                     
                     assert(capstone_store_mem(base_addr, caplen_bytes_v, CapVal(cap_set_cursor(cur_pc_cap, v))));
                     capstone_store_mem_n(base_addr, 1, unsigned(size));
+
+                    x2 = normal_sp;
+                    X(switch_reg) = CapVal(switch_buffer_cap);
 
                     /* set the CPU mode to normal world */
                     capstone_enter_normal_world();

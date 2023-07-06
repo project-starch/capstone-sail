@@ -68,7 +68,7 @@ endif
 # Non-instruction sources
 PRELUDE = prelude.sail prelude_mapping.sail $(SAIL_XLEN) $(SAIL_FLEN) prelude_mem_metadata.sail prelude_mem.sail
 
-SAIL_REGS_SRCS = riscv_types_cap.sail riscv_reg_type.sail riscv_types_revnode.sail riscv_cap_tags.sail \
+SAIL_REGS_SRCS = riscv_types_revnode.sail riscv_types_cap.sail riscv_reg_type.sail riscv_cap_tags.sail \
 				riscv_sys_regs.sail riscv_freg_type.sail riscv_regs.sail riscv_pc_access.sail 
 SAIL_REGS_SRCS += riscv_pmp_regs.sail riscv_pmp_control.sail
 SAIL_REGS_SRCS += riscv_ext_regs.sail $(SAIL_CHECK_SRCS)
