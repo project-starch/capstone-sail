@@ -570,9 +570,8 @@ function init_capstone() = {
     print_bits("Revocation node mem base = ", rnode_mem_base());
     match(capnode_duplicate(capnode_id_invalid, true)) {
       Some(new_node_id) => {
-        PCCap = encode_cap((CAP_TYPE_LIN,
-                            new_node_id,
-                            CommonCapMetadata((
+        PCCap = encode_cap((new_node_id,
+                            LinearCapMetadata((
                               EXTZ(0b0) : xlenbits,
                               EXTZ(0b0) : xlenbits,
                               EXTZ(0b1) : xlenbits << to_bits(xlen_val, xlen_val - 1),

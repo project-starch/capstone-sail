@@ -7,7 +7,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_REVOKE)) = {
     
     match(rs1_v) {
         CapVal(c) if cap_type(c) == CAP_TYPE_REV => {
-            let (_, _, _, node_id, _, _) = decode_cap_legacy(c);
+            let (node_id, _) = decode_cap(c);
             capnode_revoke(node_id);
             RETIRE_SUCCESS
         },
@@ -160,26 +160,34 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SPLIT)) = {
     let rd_v : regtype = X(rd);
     match((rs1_v, rs2_v)) {
         (CapVal(c), RawVal(v)) => {
-            let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap_legacy(c);
-            if(unsigned(v) < unsigned(start_addr) | unsigned(v) > unsigned(end_addr) |
-                ty != CAP_TYPE_LIN | capnode_query(node_id) == 0b1) then {
-                handle_illegal();
-                RETIRE_FAIL
-            } else {
-                let c1_dec = (start_addr, start_addr, v, node_id, perm, ty);
-                /* duplicate the node */
-                match(capnode_duplicate(node_id, false)) {
-                    Some(new_node_id) => {
-                        let c2_dec = (v, v, end_addr, new_node_id, perm, ty);
-                        X(rs1) = CapVal(encode_cap_legacy(c1_dec));
-                        reg_overwrite(rd_v);
-                        X(rd) = CapVal(encode_cap_legacy(c2_dec));
-                        RETIRE_SUCCESS
-                    },
-                    None() => {
+            let (node_id, metadata) = decode_cap(c);
+
+            /* only allow linear capabilities for now */
+            match metadata {
+                LinearCapMetadata(cursor, start_addr, end_addr, perm) => {
+                    if(unsigned(v) < unsigned(start_addr) | unsigned(v) > unsigned(end_addr) |
+                        capnode_query(node_id) == 0b1) then {
                         handle_illegal();
                         RETIRE_FAIL
+                    } else {
+                        /* duplicate the node */
+                        match(capnode_duplicate(node_id, false)) {
+                            Some(new_node_id) => {
+                                X(rs1) = CapVal(encode_cap((node_id, LinearCapMetadata(start_addr, start_addr, v, perm))));
+                                reg_overwrite(rd_v);
+                                X(rd) = CapVal(encode_cap((new_node_id, LinearCapMetadata(v, v, end_addr, perm))));
+                                RETIRE_SUCCESS
+                            },
+                            None() => {
+                                handle_illegal();
+                                RETIRE_FAIL
+                            }
+                        }
                     }
+                },
+                _ => {
+                    handle_illegal();
+                    RETIRE_FAIL
                 }
             }
         },
@@ -202,11 +210,11 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SEAL)) = {
     let rs1_v : regtype = X(rs1);
 
     match(rd_v, rs1_v) {
-        (CapVal(c), RawVal(v)) if cap_type(c) == CAP_TYPE_LIN => {
-            let (_, node_id, metadata) = decode_cap(c);
+        (CapVal(c), RawVal(v)) => {
+            let (node_id, metadata) = decode_cap(c);
             match metadata {
-                CommonCapMetadata(_, base_addr, _, _) => {
-                    X(rd) = CapVal(encode_cap((CAP_TYPE_SEALED, node_id, SealedCapMetadata(base_addr, v[4..0]))));
+                LinearCapMetadata(_, base_addr, _, _) => {
+                    X(rd) = CapVal(encode_cap((node_id, SealedCapMetadata(base_addr, 0b00))));
                     RETIRE_SUCCESS
                 },
                 _ => {
@@ -234,17 +242,25 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MREV)) = {
     let rs1_v : regtype = X(rs1);
     match(rs1_v) {
         CapVal(c) if cap_type(c) == CAP_TYPE_LIN => {
-            let (cursor, start_addr, end_addr, node_id, perm, ty) = decode_cap_legacy(c);
-            match(capnode_duplicate(node_id, true)) {
-                Some(new_node_id) => {
-                    let old_cap = (cursor, start_addr, end_addr, new_node_id, perm, ty);
-                    let new_cap = (cursor, start_addr, end_addr, node_id, perm, CAP_TYPE_REV);
-                    X(rs1) = CapVal(encode_cap_legacy(old_cap));
-                    reg_overwrite(rd_v);
-                    X(rd) = CapVal(encode_cap_legacy(new_cap));
-                    RETIRE_SUCCESS
+            let (node_id, metadata) = decode_cap(c);
+            match metadata {
+                LinearCapMetadata(cursor, start_addr, end_addr, perm) => {
+                    match(capnode_duplicate(node_id, true)) {
+                        Some(new_node_id) => {
+                            let old_cap = (new_node_id, LinearCapMetadata(cursor, start_addr, end_addr, perm));
+                            let new_cap = (node_id, RevocationCapMetadata(cursor, start_addr, end_addr, perm));
+                            X(rs1) = CapVal(encode_cap(old_cap));
+                            reg_overwrite(rd_v);
+                            X(rd) = CapVal(encode_cap(new_cap));
+                            RETIRE_SUCCESS
+                        },
+                        None() => {
+                            handle_illegal();
+                            RETIRE_FAIL
+                        }
+                    }
                 },
-                None() => {
+                _ => {
                     handle_illegal();
                     RETIRE_FAIL
                 }

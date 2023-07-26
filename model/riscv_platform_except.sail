@@ -22,11 +22,11 @@ function handle_illegal_in_secure() -> unit = {
             /* If we want to involve the normal world */
             /* need to set up so when the normal world next CAPENTERs */
             /* the exception handler domain will take over */
-            let (_, switch_cap_node_id, switch_cap_metadata) = decode_cap(switch_buffer_cap);
+            let (switch_cap_node_id, switch_cap_metadata) = decode_cap(switch_buffer_cap);
             let valid_ceh : bool = match (ceh, switch_cap_metadata) {
                 (CapVal(c), SealedCapMetadata(switch_cap_base, switch_cap_size))
                         if capstone_cap_is_valid(c) & capstone_cap_is_valid(switch_buffer_cap) => {
-                    let (_, _, ceh_metadata) = decode_cap(c);
+                    let (_, ceh_metadata) = decode_cap(c);
 
                     match ceh_metadata {
                         SealedCapMetadata(ceh_base_addr, ceh_size) => {
@@ -36,8 +36,8 @@ function handle_illegal_in_secure() -> unit = {
                             assert(capstone_store_mem(switch_cap_base, caplen_bytes_v, CapVal(cap_set_cursor(cur_pc_cap, epc))));
                             capstone_store_mem_n(switch_cap_base, 1, 31);
 
-                            let new_switch_cap = encode_cap((CAP_TYPE_SEALEDRET, switch_cap_node_id,
-                                SealedRetCapMetadata(switch_cap_base, switch_cap_size, EXTZ(0b0)))); /* for asynchronous */
+                            let new_switch_cap = encode_cap((switch_cap_node_id,
+                                SealedRetCapMetadata(EXTZ(0b0) : xlenbits, switch_cap_base, EXTZ(0b0) : bits(2), EXTZ(0b0) : bits(5)))); /* for asynchronous */
                             
                             /* FIXME: this could be overwritten when CAPENTER */
                             assert(capstone_store_mem(ceh_base_addr + to_bits(xlen_val, caplen_bytes_v), caplen_bytes_v, CapVal(new_switch_cap)));
@@ -75,7 +75,7 @@ function handle_illegal_in_secure() -> unit = {
             /* follow the pure Capstone exception handling semantics */
             match ceh {
                 CapVal(c) if capstone_cap_is_valid(c) => {
-                    let (_, node_id, metadata) = decode_cap(c);
+                    let (node_id, metadata) = decode_cap(c);
 
                     match metadata {
                         SealedCapMetadata(base_addr, size) => {
@@ -91,7 +91,7 @@ function handle_illegal_in_secure() -> unit = {
                             assert(capstone_store_mem(base_addr, caplen_bytes_v, CapVal(cap_set_cursor(cur_pc_cap, epc))));
 
                             /* generate cra */
-                            x1 = CapVal(encode_cap((CAP_TYPE_SEALEDRET, node_id, SealedRetCapMetadata(base_addr, size, EXTZ(0b0)))));
+                            x1 = CapVal(encode_cap((node_id, SealedRetCapMetadata(base_addr, EXTZ(0b0), EXTZ(0b0), EXTZ(0b0)))));
 
                             true
                         },

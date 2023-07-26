@@ -239,13 +239,13 @@ function capstone_scrub_reg_n(start: int, count: int) -> unit = {
 function capstone_gen_genesis() -> cap_t = {
     match(capnode_duplicate(capnode_id_invalid, true)) {
         Some(node_id) => {
-            encode_cap((CAP_TYPE_LIN, node_id,
-                        CommonCapMetadata((sec_mem_base(), sec_mem_base(), sec_mem_end(), CAP_PERM_RWX))));
+            encode_cap((node_id,
+                        LinearCapMetadata((sec_mem_base(), sec_mem_base(), sec_mem_end(), CAP_PERM_RWX))));
         },
         None() => {
             assert(false, "cannot allocate a node for genesis capability");
-            encode_cap((CAP_TYPE_LIN, capnode_id_invalid,
-                        CommonCapMetadata((EXTZ(0b0), EXTZ(0b0), EXTZ(0b0), CAP_PERM_NA))));
+            encode_cap((capnode_id_invalid,
+                        LinearCapMetadata((EXTZ(0b0), EXTZ(0b0), EXTZ(0b0), CAP_PERM_NA))));
         }
     };
 }

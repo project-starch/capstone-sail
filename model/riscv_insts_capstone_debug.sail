@@ -295,8 +295,8 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SETWORLD)) = {
                 capstone_enter_normal_world();
             } else {
                 /* enter secure world */
-                PCCap = encode_cap((CAP_TYPE_NONLIN, EXTZ(0b0),
-                    CommonCapMetadata(EXTZ(0b0), EXTZ(0b0), EXTZ(0x100000000000000), CAP_PERM_RWX)));
+                PCCap = encode_cap((EXTZ(0b0),
+                    NonLinearCapMetadata(EXTZ(0b0), EXTZ(0b0), EXTZ(0x100000000000000), CAP_PERM_RWX)));
                 capstone_enter_secure_world();
             };
             RETIRE_SUCCESS
