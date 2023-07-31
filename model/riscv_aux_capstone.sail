@@ -264,6 +264,14 @@ function capstone_scrub_reg_n(start: int, count: int) -> unit = {
     }
 }
 
+/* swap a regtype value at a memory location */
+function capstone_mem_xchg(base: xlenbits, slot: int, v: regtype) -> regtype = {
+    let addr = base + to_bits(xlen_val, slot * caplen_bytes_v);
+    let old_v = capstone_load_mem(addr, caplen_bytes_v);
+    assert(capstone_store_mem(addr, caplen_bytes_v, v));
+    old_v
+}
+
 function capstone_gen_genesis() -> cap_t = {
     match(capnode_duplicate(capnode_id_invalid, true)) {
         Some(node_id) => {

@@ -2,14 +2,67 @@
 
 mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)   <-> 0b0100000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
+/* FIXME: all the below implementations need to be atomic with respect to exception handling */
+
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)) = {
-    let cur_pc_cap = PCCap;
-    let cur_npc = nextPC; /* PC address for resuming execution */    
-    let cur_sp = x2; /* current stack pointer */
+    /* PC address for resuming execution */    
+    let cur_pc_cap = cap_set_cursor(PCCap, nextPC);
 
-    /* TODO: implement new semantics */
+    let rd_v : regtype = X(rd);
+    let rs1_v : regtype = X(rs1);
+    let ra_v : regtype = x1;
 
-    RETIRE_SUCCESS
+    if not(capstone_in_secure_world()) then {
+        handle_illegal();
+        return RETIRE_FAIL;
+    };
+
+    match rs1_v {
+      CapVal(c) => {
+        let (nid, metadata) = decode_cap(c);
+        if capnode_query(nid) == 0b1 then {
+          match metadata {
+            SealedCapMetadata(base_addr, async) if async == 0b00 => {
+              /* Swap pc */
+              let new_pc_cap_v = capstone_mem_xchg(base_addr, 0, CapVal(cur_pc_cap));
+              match new_pc_cap_v {
+                CapVal(new_pc_cap) => {
+                  capstone_redirect_to_cap(new_pc_cap);
+                },
+                _ => {
+                  handle_illegal();
+                  return RETIRE_FAIL;
+                }
+              };
+
+              /* Swap ceh */
+              ceh = capstone_mem_xchg(base_addr, 1, ceh);
+
+              /* Swap csp */
+              x2 = capstone_mem_xchg(base_addr, 2, x2);
+
+              X(rs1) = reg_moved(rs1_v);
+              reg_overwrite(ra_v);
+              let new_ra_cap_metadata = SealedRetCapMetadata(base_addr, base_addr, 0b00, rd) in
+                x1 = CapVal(encode_cap((nid, new_ra_cap_metadata)));
+
+              RETIRE_SUCCESS
+            },
+            _ => {
+              handle_illegal();
+              RETIRE_FAIL
+            }
+          }
+        } else {
+          handle_illegal();
+          RETIRE_FAIL
+        }
+      },
+      _ => {
+        handle_illegal();
+        RETIRE_FAIL
+      }
+    }
 }
 
 mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)
