@@ -1,5 +1,6 @@
 union clause ast = CAPSTONE_INSN_R : (regidx, regidx, regidx, capstone_op_r)
 union clause ast = CAPSTONE_INSN_I : (regidx, regidx, imm12, capstone_op_i)
+union clause ast = CAPSTONE_INSN_S : (regidx, regidx, imm7, imm5, capstone_op_s)
 
 /************************************************************/
 

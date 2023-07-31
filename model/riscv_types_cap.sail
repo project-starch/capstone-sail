@@ -40,10 +40,19 @@ infix 4 <=_p
 function operator <=_p (perm_a : capperm_t, perm_b : capperm_t) -> bool = {
     match((perm_a, perm_b)) {
         (p1, p2) if p1 == p2 => true,
+
         (CAP_PERM_NA, _) => true,
-        (CAP_PERM_RO, p2) if p2 != CAP_PERM_NA => true,
-        (CAP_PERM_RX, CAP_PERM_RWX) => true,
-        (CAP_PERM_RW, CAP_PERM_RWX) => true,
+        (_, CAP_PERM_RWX) => true,
+
+        (CAP_PERM_RO, CAPSTONE_RW) => true,
+        (CAP_PERM_RO, CAPSTONE_RX) => true,
+
+        (CAP_PERM_XO, CAPSTONE_RX) => true,
+        (CAP_PERM_XO, CAPSTONE_WX) => true,
+
+        (CAP_PERM_WO, CAPSTONE_RW) => true,
+        (CAP_PERM_WO, CAPSTONE_WX) => true,
+
         _ => false
     }
 }
@@ -621,3 +630,90 @@ function cap_string(cap: cap_t) -> string = {
 }
 
 let CAP_INVALID : cap_t = EXTZ(0b0)
+
+function cap_get_valid_xlenbits(cap: cap_t) -> xlenbits = {
+    let (ni, _) = decode_cap(cap) in
+    EXTZ(capnode_query(ni)) : xlenbits
+}
+
+function cap_get_type_xlenbits(cap: cap_t) -> xlenbits = {
+    let (_, metadata) = decode_cap(cap);
+    let ty : captype_t = match(metadata) {
+        LinearCapMetadata(_, _, _, _) => CAP_TYPE_LIN,
+        NonLinearCapMetadata(_, _, _, _) => CAP_TYPE_NONLIN,
+        RevocationCapMetadata(_, _, _, _) => CAP_TYPE_REV,
+        UninitialisedCapMetadata(_, _, _, _) => CAP_TYPE_UNINIT,
+        SealedCapMetadata(_, _) => CAP_TYPE_SEALED,
+        SealedRetCapMetadata(_, _, _, _) => CAP_TYPE_SEALEDRET,
+        ExitCapMetadata(_, _) => CAP_TYPE_EXIT
+    } in EXTZ(captype_bits(ty)) : xlenbits
+}
+
+function cap_get_cursor_xlenbits(cap: cap_t) -> xlenbits = {
+    let (_, metadata) = decode_cap(cap);
+    match(metadata) {
+        LinearCapMetadata(cursor, _, _, _) => EXTZ(cursor) : xlenbits,
+        NonLinearCapMetadata(cursor, _, _, _) => EXTZ(cursor) : xlenbits,
+        RevocationCapMetadata(cursor, _, _, _) => EXTZ(cursor) : xlenbits,
+        UninitialisedCapMetadata(cursor, _, _, _) => EXTZ(cursor) : xlenbits,
+        SealedCapMetadata(_, _) => EXTZ(0b0) : xlenbits,
+        SealedRetCapMetadata(cursor, _, _, _) => EXTZ(cursor) : xlenbits,
+        ExitCapMetadata(cursor, _) => EXTZ(cursor) : xlenbits
+    }
+}
+
+function cap_get_base_xlenbits(cap: cap_t) -> xlenbits = {
+    let (_, metadata) = decode_cap(cap);
+    match(metadata) {
+        LinearCapMetadata(_, base_addr, _, _) => EXTZ(base_addr) : xlenbits,
+        NonLinearCapMetadata(_, base_addr, _, _) => EXTZ(base_addr) : xlenbits,
+        RevocationCapMetadata(_, base_addr, _, _) => EXTZ(base_addr) : xlenbits,
+        UninitialisedCapMetadata(_, base_addr, _, _) => EXTZ(base_addr) : xlenbits,
+        SealedCapMetadata(base_addr, _) => EXTZ(base_addr) : xlenbits,
+        SealedRetCapMetadata(_, base_addr, _, _) => EXTZ(base_addr) : xlenbits,
+        ExitCapMetadata(_, base_addr) => EXTZ(base_addr) : xlenbits
+    }
+}
+
+function cap_get_end_xlenbits(cap: cap_t) -> xlenbits = {
+    let (_, metadata) = decode_cap(cap);
+    match(metadata) {
+        LinearCapMetadata(_, _, end_addr, _) => EXTZ(end_addr) : xlenbits,
+        NonLinearCapMetadata(_, _, end_addr, _) => EXTZ(end_addr) : xlenbits,
+        RevocationCapMetadata(_, _, end_addr, _) => EXTZ(end_addr) : xlenbits,
+        UninitialisedCapMetadata(_, _, end_addr, _) => EXTZ(end_addr) : xlenbits,
+        SealedCapMetadata(_, _) => EXTZ(0b0) : xlenbits,
+        SealedRetCapMetadata(_, _, _, _) => EXTZ(0b0) : xlenbits,
+        ExitCapMetadata(_, _) => EXTZ(0b0) : xlenbits
+    }
+}
+
+function cap_get_perms_xlenbits(cap: cap_t) -> xlenbits = {
+    let (_, metadata) = decode_cap(cap);
+    match(metadata) {
+        LinearCapMetadata(_, _, _, perm) => EXTZ(capperm_bits(perm)) : xlenbits,
+        NonLinearCapMetadata(_, _, _, perm) => EXTZ(capperm_bits(perm)) : xlenbits,
+        RevocationCapMetadata(_, _, _, perm) => EXTZ(capperm_bits(perm)) : xlenbits,
+        UninitialisedCapMetadata(_, _, _, perm) => EXTZ(capperm_bits(perm)) : xlenbits,
+        SealedCapMetadata(_, _) => EXTZ(0b0) : xlenbits,
+        SealedRetCapMetadata(_, _, _, _) => EXTZ(0b0) : xlenbits,
+        ExitCapMetadata(_, _) => EXTZ(0b0) : xlenbits
+    }
+}
+
+function cap_get_async_xlenbits(cap: cap_t) -> xlenbits = {
+    let (_, metadata) = decode_cap(cap);
+    match(metadata) {
+        SealedCapMetadata(_, async) => EXTZ(async) : xlenbits,
+        SealedRetCapMetadata(_, _, async, _) => EXTZ(async) : xlenbits,
+        _ => EXTZ(0b0) : xlenbits
+    }
+}
+
+function cap_get_reg_xlenbits(cap: cap_t) -> xlenbits = {
+    let (_, metadata) = decode_cap(cap);
+    match(metadata) {
+        SealedRetCapMetadata(_, _, _, reg) => EXTZ(reg) : xlenbits,
+        _ => EXTZ(0b0) : xlenbits
+    }
+}

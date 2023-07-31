@@ -54,9 +54,13 @@ function reg_moved(v: regtype) -> regtype = {
 
 /* memory-access related */
 
-function cap_access_allowed(c: cap_t, width: int, req_perm: capperm_t) -> bool = {
-    cap_in_bound(c, cap_cursor(c), width) &
+function cap_access_allowed_offset(c: cap_t, width: int, req_perm: capperm_t, offset: xlenbits) -> bool = {
+    cap_in_bound(c, cap_cursor(c) + offset, width) &
         req_perm <=_p cap_perm(c) & captype_grants_access(cap_type(c), capperm_involves_write(req_perm))
+}
+
+function cap_access_allowed(c: cap_t, width: int, req_perm: capperm_t) -> bool = {
+    cap_access_allowed_offset(c, width, req_perm, EXTZ(0b0))
 }
 
 function capstone_load_mem forall 'n, 0 < 'n & 'n <= 16. (addr: xlenbits, width: atom('n)) -> regtype = {

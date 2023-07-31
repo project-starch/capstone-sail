@@ -109,6 +109,9 @@ type imm12  = bits(12)
 type imm20  = bits(20)
 type amo    = bits(1)  /* amo opcode flags */
 
+type imm7   = bits(7)
+type imm5   = bits(5)
+
 /* base architecture definitions */
 
 enum Architecture = {RV32, RV64, RV128}
@@ -420,35 +423,41 @@ enum biop_zbs = {RISCV_BCLRI, RISCV_BEXTI, RISCV_BINVI, RISCV_BSETI}
 
 enum extop_zbb = {RISCV_SEXTB, RISCV_SEXTH, RISCV_ZEXTH}
 
+enum capstone_op_s = {
+  CAPSTONE_STC
+}
+
 enum capstone_op_r = {
-    /* Back door instructions*/
-    CAPSTONE_CAPCREATE, CAPSTONE_CAPTYPE, CAPSTONE_CAPNODE,
-    CAPSTONE_CAPPERM, CAPSTONE_CAPBOUND, CAPSTONE_CAPPRINT,
-    CAPSTONE_QUERY, CAPSTONE_ALLOC, CAPSTONE_REV,
-    CAPSTONE_RCUPDATE, CAPSTONE_TAGGET, CAPSTONE_TAGSET,
-    CAPSTONE_SETWORLD, CAPSTONE_ONPARTITION,
-    CAPSTONE_SETEH, CAPSTONE_ONNORMALEH,
-    /* Architectural instructions */
-    CAPSTONE_REVOKE, CAPSTONE_SHRINK, CAPSTONE_CALL,
-    CAPSTONE_RETURN,
-    CAPSTONE_TIGHTEN, CAPSTONE_DELIN,
-    CAPSTONE_SCC, CAPSTONE_LCC, CAPSTONE_SPLIT, CAPSTONE_SEAL,
-    CAPSTONE_MOVC, CAPSTONE_MREV, CAPSTONE_CJALR, CAPSTONE_CBNZ,
-    CAPSTONE_INIT, CAPSTONE_DROP,
-    CAPSTONE_CINCOFFSET,
-    /* Load/store instructions of different types/widths */
-    CAPSTONE_LDC, CAPSTONE_STC,
-    CAPSTONE_LDD, CAPSTONE_STD,
-    CAPSTONE_LDW, CAPSTONE_STW,
-    CAPSTONE_LDH, CAPSTONE_STH, 
-    CAPSTONE_LDB, CAPSTONE_STB,
-    /* TransCapstone only */
-    CAPSTONE_CAPENTER, CAPSTONE_CAPEXIT,
-    CAPSTONE_CAPGET /* instruction for obtaining the initial capability */
+  /* Back door instructions*/
+  CAPSTONE_CAPCREATE, CAPSTONE_CAPTYPE, CAPSTONE_CAPNODE,
+  CAPSTONE_CAPPERM, CAPSTONE_CAPBOUND, CAPSTONE_CAPPRINT,
+  CAPSTONE_QUERY, CAPSTONE_ALLOC, CAPSTONE_REV,
+  CAPSTONE_RCUPDATE, CAPSTONE_TAGGET, CAPSTONE_TAGSET,
+  CAPSTONE_SETWORLD, CAPSTONE_ONPARTITION,
+  CAPSTONE_SETEH, CAPSTONE_ONNORMALEH,
+  /* Cap manipulation instructions */
+  CAPSTONE_REVOKE, CAPSTONE_SHRINK, 
+  CAPSTONE_TIGHTEN /* actually type CI */, CAPSTONE_DELIN,
+  CAPSTONE_LCC /* actually type CI*/, CAPSTONE_SCC, CAPSTONE_SPLIT, CAPSTONE_SEAL,
+  CAPSTONE_MREV, CAPSTONE_INIT, CAPSTONE_MOVC, CAPSTONE_DROP,
+  CAPSTONE_CINCOFFSET,
+  /* Mem access instructions */
+  /* none */
+  /* Ctrl flow instructions */
+  CAPSTONE_CALL, CAPSTONE_RETURN,
+  /* TransCapstone-only */
+  CAPSTONE_CAPENTER, CAPSTONE_CAPEXIT
 }
   
 enum capstone_op_i = {
-  CAPSTONE_CINCOFFSETIMM
+  /* Cap manipulation instructions */
+  CAPSTONE_CINCOFFSETIMM,
+  /* Mem access instructions */
+  CAPSTONE_LDC,
+  /* Ctrl flow instructions */
+  CAPSTONE_CJALR, CAPSTONE_CBNZ,
+  /* Ctrl and status instructions */
+  CAPSTONE_CCSRRW
 }
 
 enum capstone_calltype = {
