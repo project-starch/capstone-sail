@@ -70,6 +70,7 @@ endif
 PRELUDE = prelude.sail prelude_mapping.sail $(SAIL_XLEN) $(SAIL_FLEN) prelude_mem_metadata.sail prelude_mem.sail
 
 SAIL_REGS_SRCS = riscv_types_revnode.sail riscv_types_cap.sail riscv_reg_type.sail riscv_cap_tags.sail \
+				riscv_capstone_ctrl.sail \
 				riscv_sys_regs.sail riscv_freg_type.sail riscv_regs.sail riscv_pc_access.sail 
 SAIL_REGS_SRCS += riscv_pmp_regs.sail riscv_pmp_control.sail
 SAIL_REGS_SRCS += riscv_ext_regs.sail $(SAIL_CHECK_SRCS)
@@ -77,7 +78,7 @@ SAIL_REGS_SRCS += riscv_ext_regs.sail $(SAIL_CHECK_SRCS)
 SAIL_ARCH_SRCS = $(PRELUDE)
 SAIL_ARCH_SRCS += riscv_types_common.sail riscv_types_ext.sail riscv_types.sail
 SAIL_ARCH_SRCS += riscv_vmem_types.sail $(SAIL_REGS_SRCS) $(SAIL_SYS_SRCS) riscv_platform.sail
-SAIL_ARCH_SRCS += riscv_mem.sail riscv_aux_capstone.sail riscv_platform_except.sail $(SAIL_VM_SRCS)
+SAIL_ARCH_SRCS += riscv_mem.sail $(SAIL_VM_SRCS) riscv_aux_capstone.sail riscv_platform_except.sail 
 SAIL_ARCH_RVFI_SRCS = $(PRELUDE) rvfi_dii.sail riscv_types_common.sail riscv_types_ext.sail riscv_types.sail riscv_vmem_types.sail $(SAIL_REGS_SRCS) $(SAIL_SYS_SRCS) riscv_platform.sail riscv_mem.sail $(SAIL_VM_SRCS) riscv_types_kext.sail
 SAIL_ARCH_SRCS += riscv_types_kext.sail    # Shared/common code for the cryptography extension.
 

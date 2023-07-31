@@ -79,6 +79,19 @@ function capstone_load_mem forall 'n, 0 < 'n & 'n <= 16. (addr: xlenbits, width:
     }
 }
 
+
+function capstone_load_mem_virt forall 'n, 0 < 'n & 'n <= 16. (vaddr: xlenbits, width: atom('n)) -> (xlenbits, regtype) = {
+    /* TODO: check alignment, exception handling */
+    match translateAddr(vaddr, Read(Data)) {
+        TR_Failure(e, _) => {
+            (EXTZ(0b0), RawVal(EXTZ(0b0)))
+        },
+        TR_Address(paddr, _) => {
+            (paddr, capstone_load_mem(paddr, width))
+        }
+    }
+}
+
 function capstone_write_ram forall 'n, 0 < 'n & 'n <= 16. (addr: xlenbits, width: atom('n), data: bits('n * 8)) -> bool = {
     let eares = mem_write_ea(addr, width, false, false, false);
     match(eares) {
@@ -119,6 +132,17 @@ function capstone_store_mem forall 'n, 0 < 'n & 'n <= 16. (addr: xlenbits, width
         },
         _ => {
             false
+        }
+    }
+}
+
+function capstone_store_mem_virt forall 'n, 0 < 'n & 'n <= 16. (vaddr: xlenbits, width: atom('n), v: regtype) -> (xlenbits, bool) = {
+    match translateAddr(vaddr, Write(Data)) {
+        TR_Failure(e, _) => {
+            (EXTZ(0b0), false)
+        },
+        TR_Address(paddr, _) => {
+            (paddr, capstone_store_mem(paddr, width, v))
         }
     }
 }

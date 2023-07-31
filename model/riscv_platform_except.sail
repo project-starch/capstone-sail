@@ -22,10 +22,10 @@ function handle_illegal_in_secure() -> unit = {
             /* If we want to involve the normal world */
             /* need to set up so when the normal world next CAPENTERs */
             /* the exception handler domain will take over */
-            let (switch_cap_node_id, switch_cap_metadata) = decode_cap(switch_buffer_cap);
+            let (switch_cap_node_id, switch_cap_metadata) = decode_cap(switch_cap);
             let valid_ceh : bool = match (ceh, switch_cap_metadata) {
                 (CapVal(c), SealedCapMetadata(switch_cap_base, switch_cap_size))
-                        if capstone_cap_is_valid(c) & capstone_cap_is_valid(switch_buffer_cap) => {
+                        if capstone_cap_is_valid(c) & capstone_cap_is_valid(switch_cap) => {
                     let (_, ceh_metadata) = decode_cap(c);
 
                     match ceh_metadata {
