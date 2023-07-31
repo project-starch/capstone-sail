@@ -78,10 +78,133 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = {
     let cur_npc = nextPC; /* PC address for resuming execution */
     let cur_sp = x2; /* current stack pointer */
 
-    
-    /* TODO: implement new semantics */
+    let rs1_v : regtype = X(rs1);
+    let rs2_v : regtype = X(rs2);
 
-    RETIRE_SUCCESS
+    if not(capstone_in_secure_world()) then {
+        handle_illegal();
+        return RETIRE_FAIL;
+    };
+
+    match (rs1_v, rs2_v) {
+      (CapVal(c), RawVal(v)) => {
+        let (nid, metadata) = decode_cap(c);
+        if capnode_query(nid) != 0b1 then {
+          handle_illegal();
+          return RETIRE_FAIL;
+        };
+
+        match metadata {
+          SealedRetCapMetadata(cursor, base_addr, async, ret_reg) => {
+            match async {
+              0b00 => {
+                let new_sealed_pc_cap = cap_set_cursor(cur_pc_cap, v);
+                /* Swap pc */
+                let new_pc_cap_v = capstone_mem_xchg(base_addr, 0, CapVal(new_sealed_pc_cap));
+                match new_pc_cap_v {
+                  CapVal(new_pc_cap) => {
+                    capstone_redirect_to_cap(new_pc_cap);
+                  },
+                  _ => {
+                    handle_illegal();
+                    return RETIRE_FAIL;
+                  }
+                };
+
+                /* Swap ceh */
+                ceh = capstone_mem_xchg(base_addr, 1, ceh);
+
+                /* Swap csp */
+                x2 = capstone_mem_xchg(base_addr, 2, x2);
+
+                reg_overwrite(X(ret_reg));
+                let new_sealed_cap = SealedCapMetadata(base_addr, 0b00) in
+                  X(ret_reg) = CapVal(encode_cap((nid, new_sealed_cap)));
+                
+                RETIRE_SUCCESS
+              },
+              0b01 => {
+                let new_sealed_pc_cap = cap_set_cursor(cur_pc_cap, v);
+                /* Swap pc */
+                let new_pc_cap_v = capstone_mem_xchg(base_addr, 0, CapVal(new_sealed_pc_cap));
+                match new_pc_cap_v {
+                  CapVal(new_pc_cap) => {
+                    capstone_redirect_to_cap(new_pc_cap);
+                  },
+                  _ => {
+                    handle_illegal();
+                    return RETIRE_FAIL;
+                  }
+                };
+                
+                /* Store ceh */
+                assert(capstone_store_mem(base_addr + to_bits(xlen_val, caplen_bytes_v), caplen_bytes_v, ceh));
+                ceh = CapVal(encode_cap((nid, SealedCapMetadata(base_addr, 0b00))));
+                X(rs1) = reg_moved(rs1_v);
+
+                /* Swap other GPRs */
+                reg_idx : int = 1;
+                while reg_idx < 32 do {
+                  X(to_bits(5, reg_idx)) = capstone_mem_xchg(base_addr, reg_idx + 1, X(to_bits(5, reg_idx)));
+                  reg_idx = reg_idx + 1;
+                };
+
+                RETIRE_SUCCESS
+              },
+              0b10 => {
+                let new_sealed_pc_cap = cap_set_cursor(cur_pc_cap, v);
+                /* Swap pc */
+                let new_pc_cap_v = capstone_mem_xchg(base_addr, 0, CapVal(new_sealed_pc_cap));
+                match new_pc_cap_v {
+                  CapVal(new_pc_cap) => {
+                    capstone_redirect_to_cap(new_pc_cap);
+                  },
+                  _ => {
+                    handle_illegal();
+                    return RETIRE_FAIL;
+                  }
+                };
+                  
+                /* Swap ceh */
+                ceh = capstone_mem_xchg(base_addr, 1, ceh);
+
+                /* Set cih */
+                cih = CapVal(encode_cap((nid, SealedCapMetadata(base_addr, 0b00))));
+                X(rs1) = reg_moved(rs1_v);
+
+                /* Swap other GPRs */
+                reg_idx : int = 1;
+                while reg_idx < 32 do {
+                  X(to_bits(5, reg_idx)) = capstone_mem_xchg(base_addr, reg_idx + 1, X(to_bits(5, reg_idx)));
+                  reg_idx = reg_idx + 1;
+                };
+
+                RETIRE_SUCCESS
+              },
+              _ => {
+                handle_illegal();
+                RETIRE_FAIL
+              }
+            }
+          },
+          _ => {
+            handle_illegal();
+            RETIRE_FAIL
+          }
+        }
+      },
+      (RawVal(vv), RawVal(v)) if vv == EXTZ(0b0) => {
+        let new_ceh_cap = cap_set_cursor(cur_pc_cap, v);
+        capstone_redirect_to_cap(cepc);
+        cepc = CAP_INVALID;
+
+        RETIRE_SUCCESS
+      },
+      _ => {
+        handle_illegal();
+        RETIRE_FAIL
+      }
+    }
 }
 
 mapping clause assembly = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)

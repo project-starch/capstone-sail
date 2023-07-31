@@ -13,7 +13,7 @@ register emode : bit
 register ceh : regtype
 register cih : regtype
 register cinit : cap_t
-register cepc : regtype
+register cepc : cap_t
 register switch_cap : cap_t
 
 /* registers for normal world PC and stack pointer */
