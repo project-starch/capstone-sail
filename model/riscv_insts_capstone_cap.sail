@@ -1,4 +1,4 @@
-/* Architectural instructions */
+/* Capability manipulation instructions */
 
 mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_REVOKE)   <-> 0b0000000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
@@ -155,10 +155,13 @@ mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SCC)   <-> 0b0000
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SCC)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
-    match((rd_v, rs1_v)) {
+    let rs2_v : regtype = X(rs2);
+    match((rs1_v, rs2_v)) {
         /* we do not allow setting cursor of an uninitialised capability */
         /* instead of faulting we do nothing if the type does not have cursor */
         (CapVal(cv), RawVal(v)) => {
+            X(rs1) = reg_moved(rs1_v);
+            reg_overwrite(rd_v);
             X(rd) = CapVal(cap_set_cursor(cv, v));
             RETIRE_SUCCESS
         },
@@ -184,7 +187,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SPLIT)) = {
         (CapVal(c), RawVal(v)) => {
             let (node_id, metadata) = decode_cap(c);
 
-            /* only allow linear capabilities for now */
+            /* FIXME: only allow linear capabilities for now */
             match metadata {
                 LinearCapMetadata(cursor, start_addr, end_addr, perm) => {
                     if(unsigned(v) < unsigned(start_addr) | unsigned(v) > unsigned(end_addr) |
@@ -238,6 +241,9 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SEAL)) = {
                 LinearCapMetadata(_, base_addr, end_addr, perms) if 
                         (unsigned(end_addr - base_addr) >= 33 * caplen_bytes_v) &
                         (CAP_PERM_RW <=_p perms) => {
+                    /* TODO: alignment check */
+                    X(rs1) = reg_moved(rs1_v);
+                    reg_overwrite(rd_v);
                     X(rd) = CapVal(encode_cap((node_id, SealedCapMetadata(base_addr, 0b00))));
                     RETIRE_SUCCESS
                 },
@@ -363,9 +369,11 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_DROP)) = {
     let rs1_v : regtype = X(rs1);
 
     match(rs1_v) {
-        CapVal(c) if captype_is_linear(cap_type(c)) => {
-            assert(capnode_invalidate(cap_nodeid(c)),
-                "drop: unable to invalidate the revocation node"); /* TODO: might also consider removing it from the revocation tree (optional) */
+        CapVal(c) => {
+            if captype_is_linear(cap_type(c)) then {
+                assert(capnode_invalidate(cap_nodeid(c)),
+                    "drop: unable to invalidate the revocation node"); /* TODO: might also consider removing it from the revocation tree (optional) */
+            };
             RETIRE_SUCCESS
         },
         _ => {
