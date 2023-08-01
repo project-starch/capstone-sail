@@ -20,20 +20,15 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)) = {
     match rs1_v {
       CapVal(c) => {
         let (nid, metadata) = decode_cap(c);
-        if capnode_query(nid) == 0b1 then {
+        if capnode_query(nid) == 0b0 then {
+          handle_capstone_except(E_Invalid_Cap());
+          RETIRE_FAIL
+        } else
           match metadata {
             SealedCapMetadata(base_addr, async) if async == 0b00 => {
               /* Swap pc */
               let new_pc_cap_v = capstone_mem_xchg(base_addr, 0, CapVal(cur_pc_cap));
-              match new_pc_cap_v {
-                CapVal(new_pc_cap) => {
-                  capstone_redirect_to_cap(new_pc_cap);
-                },
-                _ => {
-                  handle_illegal();
-                  return RETIRE_FAIL;
-                }
-              };
+              capstone_redirect(new_pc_cap_v);
 
               /* Swap ceh */
               ceh = capstone_mem_xchg(base_addr, 1, ceh);
@@ -49,17 +44,13 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)) = {
               RETIRE_SUCCESS
             },
             _ => {
-              handle_illegal();
+              handle_capstone_except(E_Cap_Type_Fault());
               RETIRE_FAIL
             }
           }
-        } else {
-          handle_illegal();
-          RETIRE_FAIL
-        }
       },
       _ => {
-        handle_illegal();
+        handle_capstone_except(E_Op_Type_Fault());
         RETIRE_FAIL
       }
     }
@@ -90,7 +81,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = {
       (CapVal(c), RawVal(v)) => {
         let (nid, metadata) = decode_cap(c);
         if capnode_query(nid) != 0b1 then {
-          handle_illegal();
+          handle_capstone_except(E_Invalid_Cap());
           return RETIRE_FAIL;
         };
 
@@ -101,15 +92,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = {
                 let new_sealed_pc_cap = cap_set_cursor(cur_pc_cap, v);
                 /* Swap pc */
                 let new_pc_cap_v = capstone_mem_xchg(base_addr, 0, CapVal(new_sealed_pc_cap));
-                match new_pc_cap_v {
-                  CapVal(new_pc_cap) => {
-                    capstone_redirect_to_cap(new_pc_cap);
-                  },
-                  _ => {
-                    handle_illegal();
-                    return RETIRE_FAIL;
-                  }
-                };
+                capstone_redirect(new_pc_cap_v);
 
                 /* Swap ceh */
                 ceh = capstone_mem_xchg(base_addr, 1, ceh);
@@ -182,13 +165,13 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = {
                 RETIRE_SUCCESS
               },
               _ => {
-                handle_illegal();
+                assert(false);
                 RETIRE_FAIL
               }
             }
           },
           _ => {
-            handle_illegal();
+            handle_capstone_except(E_Cap_Type_Fault());
             RETIRE_FAIL
           }
         }
@@ -201,7 +184,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = {
         RETIRE_SUCCESS
       },
       _ => {
-        handle_illegal();
+        handle_capstone_except(E_Op_Type_Fault());
         RETIRE_FAIL
       }
     }
@@ -218,10 +201,15 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CJALR)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
 
-    match(rs1_v, capstone_in_secure_world()) {
+    if capstone_in_normal_world() then {
+      handle_illegal();
+      return RETIRE_FAIL;
+    };
+
+    match rs1_v {
         /* we don't check the permission or the type here. invalid values will trigger
         faults later */
-        (CapVal(c), true) => {
+        CapVal(c) => {
             let old_pc_cap = PCCap;
             let old_npc = nextPC;
 
@@ -233,7 +221,7 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CJALR)) = {
             RETIRE_SUCCESS
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -250,9 +238,14 @@ mapping clause encdec = CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CBNZ)   <-> imm @
 function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CBNZ)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
+
+    if capstone_in_normal_world() then {
+      handle_illegal();
+      return RETIRE_FAIL;
+    };
     
-    match((rd_v, rs1_v, capstone_in_secure_world())) {
-        (CapVal(c), RawVal(v), true) => {
+    match(rd_v, rs1_v) {
+        (CapVal(c), RawVal(v)) => {
             if(v != EXTZ(0b0)) then {
                 reg_overwrite(CapVal(PCCap));
                 X(rd) = reg_moved(rd_v);
@@ -261,7 +254,7 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CBNZ)) = {
             RETIRE_SUCCESS
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -289,7 +282,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
       CapVal(c) => {
         let (nid, metadata) = decode_cap(c);
         if capnode_query(nid) != 0b1 then {
-          handle_illegal();
+          handle_capstone_except(E_Invalid_Cap());
           return RETIRE_FAIL;
         };
 
@@ -353,18 +346,18 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
 
               RETIRE_SUCCESS
             } else {
-              handle_illegal();
+              assert(false);
               RETIRE_FAIL
             }
           },
           _ => {
-            handle_illegal();
+            handle_capstone_except(E_Cap_Type_Fault());
             RETIRE_FAIL
           }
         }
       },
       _ => {
-        handle_illegal();
+        handle_capstone_except(E_Op_Type_Fault());
         RETIRE_FAIL
       }
     }
@@ -391,7 +384,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
     let cur_npc = nextPC; /* PC address for resuming execution */    
     let cur_sp = x2; /* current stack pointer */
 
-    if not(capstone_in_secure_world()) then {
+    if capstone_in_normal_world() then {
       handle_illegal();
       return RETIRE_FAIL;
     };
@@ -403,7 +396,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
       (CapVal(c), RawVal(v)) => {
         let (nid, metadata) = decode_cap(c);
         if capnode_query(nid) != 0b1 then {
-          handle_illegal();
+          handle_capstone_except(E_Invalid_Cap());
           return RETIRE_FAIL;
         };
 
@@ -435,13 +428,13 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
             RETIRE_SUCCESS
           },
           _ => {
-            handle_illegal();
+            handle_capstone_except(E_Cap_Type_Fault());
             RETIRE_FAIL 
           }
         }
       },
       _ => {
-        handle_illegal();
+        handle_capstone_except(E_Op_Type_Fault());
         RETIRE_FAIL
       }
     }

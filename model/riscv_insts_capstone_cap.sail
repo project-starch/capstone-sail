@@ -6,13 +6,21 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_REVOKE)) = {
     let rs1_v : regtype = X(rs1);
     
     match(rs1_v) {
-        CapVal(c) if cap_type(c) == CAP_TYPE_REV => {
+        CapVal(c) => {
             let (node_id, _) = decode_cap(c);
-            capnode_revoke(node_id);
-            RETIRE_SUCCESS
+            if capnode_query(node_id) == 0b0 then {
+                handle_capstone_except(E_Invalid_Cap());
+                RETIRE_FAIL
+            } else if cap_type(c) != CAP_TYPE_REV then {
+                handle_capstone_except(E_Cap_Type_Fault());
+                RETIRE_FAIL
+            } else {
+                capnode_revoke(node_id);
+                RETIRE_SUCCESS
+            }
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -31,20 +39,38 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SHRINK)) = {
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
     match((rd_v, rs1_v, rs2_v)) {
-        (CapVal(cv), RawVal(v1), RawVal(v2)) if unsigned(v1) <= unsigned(v2) => {
-            match(cap_shrink(cv, v1, v2)) {
-                Some(ncv) => {
-                    X(rd) = CapVal(ncv);
-                    RETIRE_SUCCESS
-                },
-                _ => {
-                    handle_illegal();
-                    RETIRE_FAIL
-                }
+        (CapVal(cv), RawVal(v1), RawVal(v2)) => {
+            let ty = cap_type(cv);
+            let (base_addr, end_addr) = cap_bounds(cv);
+
+            if ty != CAP_TYPE_LIN & ty != CAP_TYPE_NONLIN & ty != CAP_TYPE_UNINIT then {
+                handle_capstone_except(E_Cap_Type_Fault());
+                RETIRE_FAIL
+            } else if  unsigned(v1) <= unsigned(v2) |
+                       unsigned(v1) < unsigned(base_addr) |
+                       unsigned(v2) > unsigned(end_addr) then {
+                handle_capstone_except(E_Illegal_Op_Val());
+                RETIRE_FAIL
+            } else {
+                let res = cap_shrink(cv, v1, v2);
+                match res {
+                    Some(ncv) => {
+                        X(rd) = CapVal(ncv);
+                    },
+                    _ => {
+                        /* we have done the checks */
+                        /* shouldn't fail here */
+                        assert(false);
+                    }
+                };
+
+                RETIRE_SUCCESS
             }
+            
+
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -61,20 +87,32 @@ function clause execute (CAPSTONE_INSN_R(imm, rs1, rd, CAPSTONE_TIGHTEN)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     match rs1_v {
-        CapVal(cv) if capperm_bits_backwards_matches(imm[2..0]) => {
-            match(cap_tighten(cv, capperm_bits(imm[2..0]))) {
-                Some(ncv) => {
-                    X(rd) = CapVal(ncv);
-                    RETIRE_SUCCESS
-                },
-                _ => {
-                    handle_illegal();
-                    RETIRE_FAIL
-                }
+        CapVal(cv) => {
+            let ty = cap_type(cv);
+            let perm = cap_perm(cv);
+            if ty != CAP_TYPE_LIN & ty != CAP_TYPE_NONLIN & ty != CAP_TYPE_UNINIT then {
+                handle_capstone_except(E_Cap_Type_Fault());
+                RETIRE_FAIL
+            } else if unsigned(imm) <= 7 & not(capperm_bits(imm[2..0]) <=_p perm) then {
+                handle_capstone_except(E_Illegal_Op_Val());
+                RETIRE_FAIL
+            } else {
+                match(cap_tighten(cv, capperm_bits(imm[2..0]))) {
+                    Some(ncv) => {
+                        X(rd) = CapVal(ncv);
+                    },
+                    _ => {
+                        /* we have done the checks */
+                        /* shouldn't fail here */
+                        assert(false);
+                    }
+                };
+
+                RETIRE_SUCCESS
             }
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -99,13 +137,13 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_DELIN)) = {
                     RETIRE_SUCCESS
                 },
                 _ => {
-                    handle_illegal();
+                    handle_capstone_except(E_Cap_Type_Fault());
                     RETIRE_FAIL
                 }
             }
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -139,7 +177,7 @@ function clause execute (CAPSTONE_INSN_R(imm, rs1, rd, CAPSTONE_LCC)) = {
             RETIRE_SUCCESS
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -160,13 +198,19 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SCC)) = {
         /* we do not allow setting cursor of an uninitialised capability */
         /* instead of faulting we do nothing if the type does not have cursor */
         (CapVal(cv), RawVal(v)) => {
-            X(rs1) = reg_moved(rs1_v);
-            reg_overwrite(rd_v);
-            X(rd) = CapVal(cap_set_cursor(cv, v));
-            RETIRE_SUCCESS
+            let ty = cap_type(cv);
+            if ty == CAP_TYPE_UNINIT | ty == CAP_TYPE_SEALED then {
+                handle_capstone_except(E_Cap_Type_Fault());
+                RETIRE_FAIL
+            } else {
+                X(rs1) = reg_moved(rs1_v);
+                reg_overwrite(rd_v);
+                X(rd) = CapVal(cap_set_cursor(cv, v));
+                RETIRE_SUCCESS
+            }
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -185,39 +229,45 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SPLIT)) = {
     let rd_v : regtype = X(rd);
     match((rs1_v, rs2_v)) {
         (CapVal(c), RawVal(v)) => {
-            let (node_id, metadata) = decode_cap(c);
+            let node_id = cap_nodeid(c);
+            let ty = cap_type(c);
+            let (base_addr, end_addr) = cap_bounds(c);
+            let perm = cap_perm(c);
 
-            /* FIXME: only allow linear capabilities for now */
-            match metadata {
-                LinearCapMetadata(cursor, start_addr, end_addr, perm) => {
-                    if(unsigned(v) < unsigned(start_addr) | unsigned(v) > unsigned(end_addr) |
-                        capnode_query(node_id) == 0b1) then {
-                        handle_illegal();
-                        RETIRE_FAIL
-                    } else {
-                        /* duplicate the node */
-                        match(capnode_duplicate(node_id, false)) {
-                            Some(new_node_id) => {
-                                X(rs1) = CapVal(encode_cap((node_id, LinearCapMetadata(start_addr, start_addr, v, perm))));
-                                reg_overwrite(rd_v);
-                                X(rd) = CapVal(encode_cap((new_node_id, LinearCapMetadata(v, v, end_addr, perm))));
-                                RETIRE_SUCCESS
-                            },
-                            None() => {
-                                handle_illegal();
-                                RETIRE_FAIL
-                            }
+            if capnode_query(node_id) == 0b0 then {
+                handle_capstone_except(E_Invalid_Cap());
+                RETIRE_FAIL
+            } else if ty != CAP_TYPE_LIN & ty != CAP_TYPE_NONLIN then {
+                handle_capstone_except(E_Op_Type_Fault());
+                RETIRE_FAIL
+            } else if unsigned(v) <= unsigned(base_addr) | unsigned(v) >= unsigned(end_addr) then {
+                handle_capstone_except(E_Illegal_Op_Val());
+                RETIRE_FAIL
+            } else {
+                /* duplicate the node */
+                if ty == CAP_TYPE_LIN then {
+                    match capnode_duplicate(node_id, false) {
+                        Some(new_node_id) => {
+                            X(rs1) = CapVal(encode_cap((node_id, LinearCapMetadata(base_addr, base_addr, v, perm))));
+                            reg_overwrite(rd_v);
+                            X(rd) = CapVal(encode_cap((new_node_id, LinearCapMetadata(v, v, end_addr, perm))));
+                        },
+                        None() => {
+                            assert(false);
                         }
-                    }
-                },
-                _ => {
-                    handle_illegal();
-                    RETIRE_FAIL
-                }
+                    };
+                } else {
+                    assert(ty == CAP_TYPE_NONLIN);
+                    X(rs1) = CapVal(encode_cap((node_id, NonLinearCapMetadata(base_addr, base_addr, v, perm))));
+                    reg_overwrite(rd_v);
+                    X(rd) = CapVal(encode_cap((node_id, NonLinearCapMetadata(v, v, end_addr, perm))));
+                };
+
+                RETIRE_SUCCESS
             }
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -234,27 +284,34 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SEAL)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
 
-    match(rd_v, rs1_v) {
-        (CapVal(c), RawVal(v)) => {
+    match rs1_v {
+        CapVal(c) => {
             let (node_id, metadata) = decode_cap(c);
             match metadata {
-                LinearCapMetadata(_, base_addr, end_addr, perms) if 
-                        (unsigned(end_addr - base_addr) >= 33 * caplen_bytes_v) &
-                        (CAP_PERM_RW <=_p perms) => {
-                    /* TODO: alignment check */
-                    X(rs1) = reg_moved(rs1_v);
-                    reg_overwrite(rd_v);
-                    X(rd) = CapVal(encode_cap((node_id, SealedCapMetadata(base_addr, 0b00))));
-                    RETIRE_SUCCESS
+                LinearCapMetadata(_, base_addr, end_addr, perms) => {
+                    if not(CAP_PERM_RW <=_p perms) then {
+                        handle_capstone_except(E_Cap_Perm_Fault());
+                        RETIRE_FAIL
+                    } else if unsigned(end_addr - base_addr) < 33 * caplen_bytes_v then {
+                        handle_capstone_except(E_Illegal_Op_Val());
+                        RETIRE_FAIL
+                    } else {
+                        /* TODO: alignment check */
+                        X(rs1) = reg_moved(rs1_v);
+                        reg_overwrite(rd_v);
+                        X(rd) = CapVal(encode_cap((node_id, SealedCapMetadata(base_addr, 0b00))));
+
+                        RETIRE_SUCCESS
+                    }
                 },
                 _ => {
-                    handle_illegal();
+                    handle_capstone_except(E_Cap_Type_Fault());
                     RETIRE_FAIL
                 }
             }
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -270,34 +327,38 @@ mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MREV)   <-> 0b000
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MREV)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
-    match(rs1_v) {
-        CapVal(c) if cap_type(c) == CAP_TYPE_LIN => {
+    match rs1_v {
+        CapVal(c) => {
             let (node_id, metadata) = decode_cap(c);
-            match metadata {
-                LinearCapMetadata(cursor, start_addr, end_addr, perm) => {
-                    match(capnode_duplicate(node_id, true)) {
-                        Some(new_node_id) => {
-                            let old_cap = (new_node_id, LinearCapMetadata(cursor, start_addr, end_addr, perm));
-                            let new_cap = (node_id, RevocationCapMetadata(cursor, start_addr, end_addr, perm));
-                            X(rs1) = CapVal(encode_cap(old_cap));
-                            reg_overwrite(rd_v);
-                            X(rd) = CapVal(encode_cap(new_cap));
-                            RETIRE_SUCCESS
-                        },
-                        None() => {
-                            handle_illegal();
-                            RETIRE_FAIL
-                        }
+            if capnode_query(node_id) == 0b0 then {
+                handle_capstone_except(E_Invalid_Cap());
+                RETIRE_FAIL
+            } else
+                match metadata {
+                    LinearCapMetadata(cursor, start_addr, end_addr, perm) => {
+                        match(capnode_duplicate(node_id, true)) {
+                            Some(new_node_id) => {
+                                let old_cap = (new_node_id, LinearCapMetadata(cursor, start_addr, end_addr, perm));
+                                let new_cap = (node_id, RevocationCapMetadata(cursor, start_addr, end_addr, perm));
+                                X(rs1) = CapVal(encode_cap(old_cap));
+                                reg_overwrite(rd_v);
+                                X(rd) = CapVal(encode_cap(new_cap));
+                            },
+                            None() => {
+                                assert(false);
+                            }
+                        };
+
+                        RETIRE_SUCCESS
+                    },
+                    _ => {
+                        handle_capstone_except(E_Cap_Type_Fault());
+                        RETIRE_FAIL
                     }
-                },
-                _ => {
-                    handle_illegal();
-                    RETIRE_FAIL
                 }
-            }
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -316,15 +377,25 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_INIT)) = {
     let rs2_v : regtype = X(rs2);
 
     match(rs1_v, rs2_v) {
-        (CapVal(cv), RawVal(v)) if capstone_cap_initialised(cv) => {
-            let ncv = cap_set_cursor(capstone_initialise_nocheck(cv), v);
-            reg_overwrite(rd_v);
-            X(rs1) = reg_moved(rs1_v);
-            X(rd) = CapVal(ncv);
-            RETIRE_SUCCESS
+        (CapVal(cv), RawVal(v)) => {
+            let ty = cap_type(cv);
+            if ty != CAP_TYPE_UNINIT then {
+                handle_capstone_except(E_Cap_Type_Fault());
+                RETIRE_FAIL
+            } else if not(capstone_cap_initialised(cv)) then {
+                handle_capstone_except(E_Illegal_Op_Val());
+                RETIRE_FAIL
+            } else {
+                let ncv = cap_set_cursor(capstone_initialise_nocheck(cv), v);
+                reg_overwrite(rd_v);
+                X(rs1) = reg_moved(rs1_v);
+                X(rd) = CapVal(ncv);
+
+                RETIRE_SUCCESS
+            }
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -350,7 +421,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MOVC)) = {
             RETIRE_SUCCESS
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -377,7 +448,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_DROP)) = {
             RETIRE_SUCCESS
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -396,14 +467,22 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CINCOFFSET)) = {
     let rs2_v : regtype = X(rs2);
     match (rs1_v, rs2_v) {
         (CapVal(c), RawVal(offset)) => {
-            let new_cursor = cap_cursor(c) + offset;
-            X(rd) = CapVal(cap_set_cursor(c, new_cursor));
-            reg_overwrite(rd_v);
-            if rs1 != rd then X(rs1) = reg_moved(rs1_v); /* only when the source register is not simultaneously written */
-            RETIRE_SUCCESS
+            let ty = cap_type(c);
+
+            if ty == CAP_TYPE_UNINIT | ty == CAP_TYPE_SEALED then {
+                handle_capstone_except(E_Cap_Type_Fault());
+                RETIRE_FAIL
+            } else {
+                let new_cursor = cap_cursor(c) + offset;
+                X(rd) = CapVal(cap_set_cursor(c, new_cursor));
+                reg_overwrite(rd_v);
+                if rs1 != rd then X(rs1) = reg_moved(rs1_v); /* only when the source register is not simultaneously written */
+
+                RETIRE_SUCCESS
+            }
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
@@ -423,14 +502,22 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSETIMM)) 
 
     match(rs1_v) {
         CapVal(c) => {
-            let new_cursor = cap_cursor(c) + imm_v;
-            X(rd) = CapVal(cap_set_cursor(c, new_cursor));
-            reg_overwrite(rd_v);
-            if rs1 != rd then X(rs1) = reg_moved(rs1_v); /* only when the source register is not simultaneously written */
-            RETIRE_SUCCESS
+            let ty = cap_type(c);
+
+            if ty == CAP_TYPE_UNINIT | ty == CAP_TYPE_SEALED then {
+                handle_capstone_except(E_Cap_Type_Fault());
+                RETIRE_FAIL
+            } else {
+                let new_cursor = cap_cursor(c) + imm_v;
+                X(rd) = CapVal(cap_set_cursor(c, new_cursor));
+                reg_overwrite(rd_v);
+                if rs1 != rd then X(rs1) = reg_moved(rs1_v); /* only when the source register is not simultaneously written */
+
+                RETIRE_SUCCESS
+            }
         },
         _ => {
-            handle_illegal();
+            handle_capstone_except(E_Op_Type_Fault());
             RETIRE_FAIL
         }
     }
