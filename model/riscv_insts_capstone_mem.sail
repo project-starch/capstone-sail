@@ -13,7 +13,7 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_LDC)) = {
             capnode_query(cap_nodeid(c)) == 0b1 => {
             /* load using a capability */
             /* load data and tag */
-            let addr = cap_cursor(c) + EXTZ(imm) : xlenbits; 
+            let addr = cap_cursor(c) + EXTS(imm) : xlenbits; 
             let v = capstone_load_mem(addr, 16);
             reg_overwrite(rd_v);
             X(rd) = v;
@@ -22,7 +22,7 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_LDC)) = {
         },
         (false, RawVal(v)) => {
             /* load using raw address */
-            let addr = v + EXTZ(imm) : xlenbits;
+            let addr = v + EXTS(imm) : xlenbits;
             let (paddr, v) = capstone_load_mem_virt(addr, 16);
             reg_overwrite(rd_v);
             X(rd) = v;
@@ -52,10 +52,10 @@ function clause execute (CAPSTONE_INSN_S(rs2, rs1, imm7, imm5, CAPSTONE_STC)) = 
     let use_cap = capstone_in_secure_world() | emode == bitone;
 
     match(use_cap, rs1_v) {
-        (true, CapVal(c)) if cap_access_allowed_offset(c, 16, CAP_PERM_RW, EXTZ(imm))
+        (true, CapVal(c)) if cap_access_allowed_offset(c, 16, CAP_PERM_RW, EXTS(imm))
                 & capnode_query(cap_nodeid(c)) == 0b1 => {
             /* store using a capability */
-            let addr = cap_cursor(c) + EXTZ(imm);
+            let addr = cap_cursor(c) + EXTS(imm);
             mem_overwrite(addr, to_bits(xlen_val, 16));
             assert(capstone_store_mem(addr, 16, rs2_v));
             X(rs2) = reg_moved(rs2_v);
@@ -69,7 +69,7 @@ function clause execute (CAPSTONE_INSN_S(rs2, rs1, imm7, imm5, CAPSTONE_STC)) = 
         },
         (false, RawVal(v)) => {
             /* store using a raw address */
-            let addr = v + EXTZ(imm);
+            let addr = v + EXTS(imm);
             let (paddr, success) = capstone_store_mem_virt(addr, 16, rs2_v);
             assert(success);
             mem_overwrite(paddr, to_bits(xlen_val, 16));
