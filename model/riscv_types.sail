@@ -246,7 +246,15 @@ union ExceptionType = {
  E_Load_Page_Fault    : unit,
  E_Reserved_14        : unit,
  E_SAMO_Page_Fault    : unit,
- E_Fetch_Cap_Fault    : unit,
+ /* Capstone-specific exceptions */
+ E_Op_Type_Fault      : unit,
+ E_Invalid_Cap        : unit,
+ E_Cap_Type_Fault     : unit,
+ E_Cap_Perm_Fault     : unit,
+ E_Cap_Out_Of_Bounds  : unit,
+ E_Illegal_Op_Val     : unit,
+ E_Unhandled_Except   : unit,
+
 
  /* extensions */
  E_Extension          : ext_exc_type
@@ -271,10 +279,19 @@ function exceptionType_to_bits(e) =
     E_Load_Page_Fault()    => 0x0d,
     E_Reserved_14()        => 0x0e,
     E_SAMO_Page_Fault()    => 0x0f,
-    E_Fetch_Cap_Fault()    => 0x10,
 
     /* extensions */
-    E_Extension(e)         => ext_exc_type_to_bits(e)
+    E_Extension(e)         => ext_exc_type_to_bits(e),
+
+    /* TODO: consider using the extension hooks */
+    /* Capstone */
+    E_Op_Type_Fault()      => 0x18,
+    E_Invalid_Cap()        => 0x19,
+    E_Cap_Type_Fault()     => 0x1a,
+    E_Cap_Perm_Fault()     => 0x1b,
+    E_Cap_Out_Of_Bounds()  => 0x1c,
+    E_Illegal_Op_Val()     => 0x1d,
+    E_Unhandled_Except()   => 0x3f
   }
 
 val num_of_ExceptionType : ExceptionType -> {'n, (0 <= 'n < xlen). int('n)}
@@ -296,12 +313,18 @@ function num_of_ExceptionType(e) =
     E_Load_Page_Fault()    => 13,
     E_Reserved_14()        => 14,
     E_SAMO_Page_Fault()    => 15,
-    /* for Capstone */
-    E_Fetch_Cap_Fault()      => 16,
 
     /* extensions */
-    E_Extension(e)         => num_of_ext_exc_type(e)
+    E_Extension(e)         => num_of_ext_exc_type(e),
 
+    /* Capstone */
+    E_Op_Type_Fault()      => 24,
+    E_Invalid_Cap()        => 25,
+    E_Cap_Type_Fault()     => 26,
+    E_Cap_Perm_Fault()     => 27,
+    E_Cap_Out_Of_Bounds()  => 28,
+    E_Illegal_Op_Val()     => 29,
+    E_Unhandled_Except()   => 63
   }
 
 val exceptionType_to_str : ExceptionType -> string
@@ -323,10 +346,18 @@ function exceptionType_to_str(e) =
     E_Load_Page_Fault()    => "load-page-fault",
     E_Reserved_14()        => "reserved-1",
     E_SAMO_Page_Fault()    => "store/amo-page-fault",
-    E_Fetch_Cap_Fault()    => "invalid pc capability",
 
     /* extensions */
-    E_Extension(e)         => ext_exc_type_to_str(e)
+    E_Extension(e)         => ext_exc_type_to_str(e),
+
+    /* Capstone */
+    E_Op_Type_Fault()      => "unexpected-op-type",
+    E_Invalid_Cap()        => "invalid-capability",
+    E_Cap_Type_Fault()     => "unexpected-cap-type",
+    E_Cap_Perm_Fault()     => "insufficient-capability-permissions",
+    E_Cap_Out_Of_Bounds()  => "capability-out-of-bounds",
+    E_Illegal_Op_Val()     => "illegal-operand-value",
+    E_Unhandled_Except()   => "unhandled-exception"
   }
 
 overload to_str = {exceptionType_to_str}

@@ -334,6 +334,7 @@ function getPendingSet(priv : Privilege) -> option((xlenbits, Privilege)) = {
 /* Examine the current interrupt state and return an interrupt to be *
  * handled (if any), and the privilege it should be handled at.
  */
+/* TODO: interrupt dispatch would need to take into consideration the secure world */
 function dispatchInterrupt(priv : Privilege) -> option((InterruptType, Privilege)) = {
   /* If we don't have different privilege levels, we don't need to check delegation.
    * Absence of U-mode implies absence of S-mode.
@@ -386,6 +387,7 @@ $endif
 
 /* handle exceptional ctl flow by updating nextPC and operating privilege */
 
+/* note that this is the exception handler for normal world only */
 function trap_handler(del_priv : Privilege, intr : bool, c : exc_code, pc : xlenbits, info : option(xlenbits), ext : option(ext_exception))
                      -> xlenbits = {
   rvfi_trap();

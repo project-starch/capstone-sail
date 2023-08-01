@@ -82,7 +82,7 @@ function fetch() -> FetchResult = {
   if capstone_in_secure_world() & not(check_pc_cap(get_arch_pc(), PCCap)) then {
     print_bits("Arch PC = ", get_arch_pc());
     print_cap("PCCap (invalid)", PCCap);
-    F_Error(E_Fetch_Cap_Fault(), get_arch_pc())
+    F_Error(E_Invalid_Cap(), get_arch_pc())
   } else
   match ext_fetch_check_pc(get_arch_pc(), get_arch_pc()) {
     Ext_FetchAddr_Error(e)   => F_Ext_Error(e),
