@@ -362,6 +362,15 @@ function cap_nodeid(cap: cap_t) -> capnodeidbits = {
     let (ni, _) = decode_cap(cap) in ni
 }
 
+function cap_async(cap: cap_t) -> bits(2) = {
+    let (_, metadata) = decode_cap(cap) in
+        match(metadata) {
+            SealedCapMetadata(_, async) => async,
+            SealedRetCapMetadata(_, _, async, _) => async,
+            _ => EXTZ(0b0)
+        }
+}
+
 function cap_bounds(cap: cap_t) -> (xlenbits, xlenbits) = {
     let (_, metadata) = decode_cap(cap) in
         match(metadata) {

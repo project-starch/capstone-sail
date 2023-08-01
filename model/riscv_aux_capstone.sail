@@ -306,15 +306,147 @@ function capstone_initialise_nocheck(c: cap_t) -> cap_t = {
     cap_set_type(c, CAP_TYPE_LIN)
 }
 
+function capstone_async_exit(trigger_interrupt: bool, exit_code: xlenbits) -> unit = {
+    let (nid, metadata) = decode_cap(switch_cap);
+    let ty = cap_type(switch_cap);
+    let perm = cap_perm(switch_cap);
+    let size = cap_bound_size(switch_cap);
+    let context_saveable = capnode_query(nid) == 0b1 &
+            (ty == CAP_TYPE_LIN | ty == CAP_TYPE_UNINIT) &
+            CAP_PERM_RW <=_p perm &
+            unsigned(size) >= caplen_bytes_v * 33;
+
+    if context_saveable then {
+        /* We have the conditions for saving the context */
+
+        let (base_addr, _) = cap_bounds(switch_cap);
+
+        /* store pc */
+        let cur_pc_cap = cap_set_cursor(PCCap, nextPC) in
+            assert(capstone_mem_store(base_addr, 0, CapVal(cur_pc_cap)));
+        
+        /* store ceh */
+        assert(capstone_mem_store(base_addr, 1, ceh));
+
+        /* store the remaining GPRs and scrub them */
+        reg_idx : int = 1;
+        while reg_idx < 32 do {
+            let v : regtype = X(to_bits(5, reg_idx)) in {
+                assert(capstone_mem_store(base_addr, reg_idx + 1, v));
+                X(to_bits(5, reg_idx)) = RawVal(EXTZ(0b0));
+            };
+            reg_idx = reg_idx + 1;
+        };
+
+        /* load pc and sp */
+        PCCap = CAP_INVALID;
+        let new_pc = normal_pc in
+            capstone_redirect_to_addr(new_pc);
+        x2 = normal_sp;
+
+        /* write back X(switch_reg) */
+        let async_code : bits(2) = if trigger_interrupt then 0b10 else 0b01 in
+        let new_sealed_cap_metadata = SealedCapMetadata(base_addr, async_code) in
+            X(switch_reg) = CapVal(encode_cap((nid, new_sealed_cap_metadata)));
+        switch_cap = CAP_INVALID;
+
+        /* write back X(exit_reg) */
+        if not(trigger_interrupt) then
+            X(exit_reg) = RawVal(exit_code);
+
+        capstone_enter_normal_world();
+    } else {
+        /* we are not able to save the context */
+        /* switch to normal without doing much */
+
+        /* scrub all GPRs */
+        reg_idx : int = 1;
+        while reg_idx < 32 do {
+            X(to_bits(5, reg_idx)) = RawVal(EXTZ(0b0));
+            reg_idx = reg_idx + 1;
+        };
+
+        /* load pc and sp */
+        PCCap = CAP_INVALID;
+        let new_pc = normal_pc in
+            capstone_redirect_to_addr(new_pc);
+        x2 = normal_sp;
+
+        /* write back X(exit_reg) */
+        if not(trigger_interrupt) then
+            X(exit_reg) = RawVal(exit_code);
+
+        capstone_enter_normal_world();
+    }
+}
+
 /* control flow transfer upon interrupt */
+/* after calling this function, the CPU is guaranteed to be in normal world */
 function capstone_int_transfer() -> unit = {
-    /* TODO: do something here */
-    ()
+    capstone_async_exit(true, EXTZ(0b0));
+
+    assert(capstone_in_normal_world());
 }
 
 
 /* control flow transfer upon exception */
-function capstone_except_transfer() -> unit = {
-    /* TODO: implement */
-    ()
+/* the end of this function call, we might be in normal world or secure world */
+function capstone_except_transfer(except_code: xlenbits, exit_code: xlenbits) -> unit = {
+    let cur_ceh = ceh;
+
+    /* attempt to deliver to exception handler */
+    let delivered_to_exception_handler : bool = match cur_ceh {
+        CapVal(c) => {
+            let ty = cap_type(c);
+            let (base_addr, _) = cap_bounds(c);
+            let async = cap_async(c);
+            let nid = cap_nodeid(c);
+            let perm = cap_perm(c);
+
+            if capnode_query(nid) == 0b0 then {
+                false
+            } else if ty == CAP_TYPE_SEALED & async == 0b00 then {
+                /* deliver to a separate domain */
+
+                /* swap pc */
+                /* we need current pc instead of npc */
+                let cur_pc_cap = cap_set_cursor(PCCap, PC);
+                let new_pc_v = capstone_mem_xchg(base_addr, 0, CapVal(cur_pc_cap));
+                capstone_redirect(new_pc_v);
+
+                /* swap GPRs */
+                reg_idx : int = 1;
+                while reg_idx < 32 do {
+                    let reg_idx_bits = to_bits(5, reg_idx) in
+                    X(reg_idx_bits) = capstone_mem_xchg(base_addr, reg_idx + 1, X(reg_idx_bits));
+                    reg_idx = reg_idx + 1;
+                };
+
+                /* set ra */
+                let new_ra_cap_metadata = SealedRetCapMetadata(base_addr, base_addr, 0b01, EXTZ(0b0)) in
+                    x1 = CapVal(encode_cap((nid, new_ra_cap_metadata)));
+
+                /* load ceh */
+                ceh = capstone_mem_xchg(base_addr, 1, RawVal(EXTZ(0b0)));
+
+                /* write exception code to a0 */
+                x10 = RawVal(except_code);
+
+                true
+            } else if (ty == CAP_TYPE_LIN | ty == CAP_TYPE_NONLIN) &
+                    CAP_PERM_XO <=_p perm then {
+                /* deliver within domain*/
+
+                true
+            } else
+                false
+        }, 
+        _ => false
+    };
+
+    /* unable to handle within secure world, need to deliver to normal world */
+    if not(delivered_to_exception_handler) then {
+        /* we use exit code instead of exception code here */
+        capstone_async_exit(false, exit_code);
+    }
 }
