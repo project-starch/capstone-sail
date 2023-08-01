@@ -61,10 +61,10 @@ function handle_illegal_in_secure() -> unit = {
                 capstone_scrub_reg_n(1, 31); /* scrub all GPRs */
             };
 
-            capstone_redirect_to_addr(normal_npc);
+            capstone_redirect_to_addr(normal_pc);
             x2 = normal_sp;
 
-            PC = normal_npc - EXTZ(0x4); /* exception handling in normal world uses PC */
+            PC = normal_pc - EXTZ(0x4); /* exception handling in normal world uses PC */
 
             capstone_enter_normal_world();
             handle_illegal_in_normal();

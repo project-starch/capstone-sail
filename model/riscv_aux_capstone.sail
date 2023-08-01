@@ -272,6 +272,14 @@ function capstone_mem_xchg(base: xlenbits, slot: int, v: regtype) -> regtype = {
     old_v
 }
 
+function capstone_mem_load(base: xlenbits, slot: int) -> regtype = {
+    capstone_load_mem(base + to_bits(xlen_val, slot * caplen_bytes_v), caplen_bytes_v)
+}
+
+function capstone_mem_store(base: xlenbits, slot: int, v: regtype) -> bool = {
+    capstone_store_mem(base + to_bits(xlen_val, slot * caplen_bytes_v), caplen_bytes_v, v)
+}
+
 function capstone_gen_genesis() -> cap_t = {
     match(capnode_duplicate(capnode_id_invalid, true)) {
         Some(node_id) => {

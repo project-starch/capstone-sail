@@ -17,6 +17,7 @@ register cepc : cap_t
 register switch_cap : cap_t
 
 /* registers for normal world PC and stack pointer */
-register normal_npc : xlenbits
+register normal_pc : xlenbits
 register normal_sp  : regtype
 register switch_reg : bits(5)
+register exit_reg : bits(5)
