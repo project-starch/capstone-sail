@@ -306,7 +306,15 @@ function capstone_initialise_nocheck(c: cap_t) -> cap_t = {
     cap_set_type(c, CAP_TYPE_LIN)
 }
 
-function capstone_async_exit() -> unit = {
+/* control flow transfer upon interrupt */
+function capstone_int_transfer() -> unit = {
     /* TODO: do something here */
+    ()
+}
+
+
+/* control flow transfer upon exception */
+function capstone_except_transfer() -> unit = {
+    /* TODO: implement */
     ()
 }

@@ -527,7 +527,7 @@ function exception_handler(cur_priv : Privilege, ctl : ctl_result,
 }
 
 /* asynchronous exit from Capstone secure world to the normal world */
-val capstone_async_exit: unit -> unit
+val capstone_except_transfer: unit -> unit
 
 
 function handle_mem_exception(addr : xlenbits, e : ExceptionType) -> unit = {
@@ -536,7 +536,7 @@ function handle_mem_exception(addr : xlenbits, e : ExceptionType) -> unit = {
                                     ext     = None() };
   if capstone_in_secure_world() then {
     /* if we are in the secure world, we need to do an asynchronous exit first */
-    capstone_async_exit();
+    capstone_except_transfer();
     /* TODO: might need to adjust the interrupt pointer */
   };
   set_next_pc(exception_handler(effective_privilege(), CTL_TRAP(t), PC)) // TODO: perform checks on the PC
@@ -548,7 +548,7 @@ function handle_exception(e: ExceptionType) -> unit = {
                                     ext     = None() };
   if capstone_in_secure_world() then {
     /* if we are in the secure world, we need to do an asynchronous exit first */
-    capstone_async_exit();
+    capstone_except_transfer();
     /* TODO: might need to adjust the interrupt pointer */
   };
   set_next_pc(exception_handler(effective_privilege(), CTL_TRAP(t), PC)) // TODO: perform some checks
@@ -558,7 +558,7 @@ function handle_exception(e: ExceptionType) -> unit = {
 function handle_interrupt(i : InterruptType, del_priv : Privilege) -> unit = {
   if capstone_in_secure_world() then {
     /* if we are in the secure world, we need to do an asynchronous exit first */
-    capstone_async_exit();
+    capstone_except_transfer();
   };
   set_next_pc(trap_handler(del_priv, true, interruptType_to_bits(i), PC, None(), None()))
 }
