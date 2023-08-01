@@ -387,27 +387,61 @@ function clause execute(LOAD(imm, rs1, rd, is_unsigned, width, aq, rl)) = {
   let offset : xlenbits = EXTS(imm);
   /* Get the address, X(rs1) + offset.
      Some extensions perform additional checks on address validity. */
-  match ext_data_get_addr(rs1, offset, Read(Data), width) {
-    Ext_DataAddr_Error(e)  => { ext_handle_data_check_error(e); RETIRE_FAIL },
-    Ext_DataAddr_OK(vaddr) =>
-      if   check_misaligned(vaddr, width)
-      then { handle_mem_exception(vaddr, E_Load_Addr_Align()); RETIRE_FAIL }
-      else match translateAddr(vaddr, Read(Data)) {
-        TR_Failure(e, _) => { handle_mem_exception(vaddr, e); RETIRE_FAIL },
-        TR_Address(paddr, _) =>
-          match (width) {
-            BYTE =>
-              process_load(rd, vaddr, mem_read(Read(Data), paddr, 1, aq, rl, false), is_unsigned),
-            HALF =>
-              process_load(rd, vaddr, mem_read(Read(Data), paddr, 2, aq, rl, false), is_unsigned),
-            WORD =>
-              process_load(rd, vaddr, mem_read(Read(Data), paddr, 4, aq, rl, false), is_unsigned),
-            DOUBLE if sizeof(xlen) >= 64 =>
-              process_load(rd, vaddr, mem_read(Read(Data), paddr, 8, aq, rl, false), is_unsigned),
-            _ => report_invalid_width(__FILE__, __LINE__, width, "load")
-          }
+
+  let use_cap = capstone_in_secure_world() | emode == bitone;
+
+  if use_cap then {
+    /* access using capability */
+    let rs1_v : regtype = X(rs1);
+
+    match rs1_v {
+      CapVal(c) => {
+        let width_bytes : int = word_width_bytes(width);
+        if not(cap_access_allowed_offset(c, width_bytes, CAP_PERM_RO, offset)) then {
+          handle_illegal();
+          return RETIRE_FAIL;
+        };
+        /* just load the data */
+
+        let addr = cap_cursor(c) + offset;
+        let v : regtype = match width {
+          BYTE   => capstone_load_mem(addr, 1),
+          HALF   => capstone_load_mem(addr, 2),
+          WORD   => capstone_load_mem(addr, 4),
+          DOUBLE => capstone_load_mem(addr, 8)
+        };
+        reg_overwrite(X(rd));
+        X(rd) = v;
+        RETIRE_SUCCESS
+      },
+      _ => {
+        handle_illegal();
+        RETIRE_FAIL
       }
-  }
+    }
+  } else /* access using raw address through MMU */
+    /* TODO: handle overwrite */
+    match ext_data_get_addr(rs1, offset, Read(Data), width) {
+      Ext_DataAddr_Error(e)  => { ext_handle_data_check_error(e); RETIRE_FAIL },
+      Ext_DataAddr_OK(vaddr) =>
+        if   check_misaligned(vaddr, width)
+        then { handle_mem_exception(vaddr, E_Load_Addr_Align()); RETIRE_FAIL }
+        else match translateAddr(vaddr, Read(Data)) {
+          TR_Failure(e, _) => { handle_mem_exception(vaddr, e); RETIRE_FAIL },
+          TR_Address(paddr, _) =>
+            match (width) {
+              BYTE =>
+                process_load(rd, vaddr, mem_read(Read(Data), paddr, 1, aq, rl, false), is_unsigned),
+              HALF =>
+                process_load(rd, vaddr, mem_read(Read(Data), paddr, 2, aq, rl, false), is_unsigned),
+              WORD =>
+                process_load(rd, vaddr, mem_read(Read(Data), paddr, 4, aq, rl, false), is_unsigned),
+              DOUBLE if sizeof(xlen) >= 64 =>
+                process_load(rd, vaddr, mem_read(Read(Data), paddr, 8, aq, rl, false), is_unsigned),
+              _ => report_invalid_width(__FILE__, __LINE__, width, "load")
+            }
+        }
+    }
 }
 
 val maybe_aq : bool <-> string
@@ -443,42 +477,79 @@ function clause execute (STORE(imm, rs2, rs1, width, aq, rl)) = {
   let offset : xlenbits = EXTS(imm);
   /* Get the address, X(rs1) + offset.
      Some extensions perform additional checks on address validity. */
-  match ext_data_get_addr(rs1, offset, Write(Data), width) {
-    Ext_DataAddr_Error(e)  => { ext_handle_data_check_error(e); RETIRE_FAIL },
-    Ext_DataAddr_OK(vaddr) =>
-      if   check_misaligned(vaddr, width)
-      then { handle_mem_exception(vaddr, E_SAMO_Addr_Align()); RETIRE_FAIL }
-      else match translateAddr(vaddr, Write(Data)) {
-        TR_Failure(e, _)    => { handle_mem_exception(vaddr, e); RETIRE_FAIL },
-        TR_Address(paddr, _) => {
-          let eares : MemoryOpResult(unit) = match width {
-            BYTE   => mem_write_ea(paddr, 1, aq, rl, false),
-            HALF   => mem_write_ea(paddr, 2, aq, rl, false),
-            WORD   => mem_write_ea(paddr, 4, aq, rl, false),
-            DOUBLE => mem_write_ea(paddr, 8, aq, rl, false)
-          };
-          match (eares) {
-            MemException(e) => { handle_mem_exception(vaddr, e); RETIRE_FAIL },
-            MemValue(_) => {
-              let rs2_val = X(rs2);
-              let res : MemoryOpResult(bool) = match (width) {
-                BYTE => mem_write_value(paddr, 1, rs2_val[7..0],  aq, rl, false),
-                HALF => mem_write_value(paddr, 2, rs2_val[15..0], aq, rl, false),
-                WORD => mem_write_value(paddr, 4, rs2_val[31..0], aq, rl, false),
-                DOUBLE if sizeof(xlen) >= 64
-                     => mem_write_value(paddr, 8, rs2_val,        aq, rl, false),
-                _    => report_invalid_width(__FILE__, __LINE__, width, "store"),
-              };
-              match (res) {
-                MemValue(true)  => RETIRE_SUCCESS,
-                MemValue(false) => internal_error(__FILE__, __LINE__, "store got false from mem_write_value"),
-                MemException(e) => { handle_mem_exception(vaddr, e); RETIRE_FAIL }
+
+  let use_cap = capstone_in_secure_world() | emode == bitone;
+
+  if use_cap then {
+    let rs1_v : regtype = X(rs1);
+    let rs2_v : regtype = X(rs2);
+
+    match rs1_v {
+      CapVal(c) => {
+        let width_bytes : int = word_width_bytes(width);
+        if not(cap_access_allowed_offset(c, width_bytes, CAP_PERM_WO, offset)) then {
+          handle_illegal();
+          return RETIRE_FAIL;
+        };
+
+        let addr = cap_cursor(c) + offset;
+        mem_overwrite(addr, to_bits(xlen_val, width_bytes));
+
+        match width {
+          BYTE => assert(capstone_store_mem(addr, 1, rs2_v)),
+          HALF => assert(capstone_store_mem(addr, 2, rs2_v)),
+          WORD => assert(capstone_store_mem(addr, 4, rs2_v)),
+          DOUBLE => assert(capstone_store_mem(addr, 8, rs2_v))
+        };
+
+        /* no need to zero rs2 as we are not writing a capability */
+        if cap_type(c) == CAP_TYPE_UNINIT then {
+          X(rs1) = CapVal(cap_set_cursor(c, addr + width_bytes));
+        };
+        RETIRE_SUCCESS
+      },
+      _ => {
+        handle_illegal();
+        RETIRE_FAIL
+      }
+    }
+  } else
+    match ext_data_get_addr(rs1, offset, Write(Data), width) {
+      Ext_DataAddr_Error(e)  => { ext_handle_data_check_error(e); RETIRE_FAIL },
+      Ext_DataAddr_OK(vaddr) =>
+        if   check_misaligned(vaddr, width)
+        then { handle_mem_exception(vaddr, E_SAMO_Addr_Align()); RETIRE_FAIL }
+        else match translateAddr(vaddr, Write(Data)) {
+          TR_Failure(e, _)    => { handle_mem_exception(vaddr, e); RETIRE_FAIL },
+          TR_Address(paddr, _) => {
+            let eares : MemoryOpResult(unit) = match width {
+              BYTE   => mem_write_ea(paddr, 1, aq, rl, false),
+              HALF   => mem_write_ea(paddr, 2, aq, rl, false),
+              WORD   => mem_write_ea(paddr, 4, aq, rl, false),
+              DOUBLE => mem_write_ea(paddr, 8, aq, rl, false)
+            };
+            match (eares) {
+              MemException(e) => { handle_mem_exception(vaddr, e); RETIRE_FAIL },
+              MemValue(_) => {
+                let rs2_val = X(rs2);
+                let res : MemoryOpResult(bool) = match (width) {
+                  BYTE => mem_write_value(paddr, 1, rs2_val[7..0],  aq, rl, false),
+                  HALF => mem_write_value(paddr, 2, rs2_val[15..0], aq, rl, false),
+                  WORD => mem_write_value(paddr, 4, rs2_val[31..0], aq, rl, false),
+                  DOUBLE if sizeof(xlen) >= 64
+                      => mem_write_value(paddr, 8, rs2_val,        aq, rl, false),
+                  _    => report_invalid_width(__FILE__, __LINE__, width, "store"),
+                };
+                match (res) {
+                  MemValue(true)  => RETIRE_SUCCESS,
+                  MemValue(false) => internal_error(__FILE__, __LINE__, "store got false from mem_write_value"),
+                  MemException(e) => { handle_mem_exception(vaddr, e); RETIRE_FAIL }
+                }
               }
             }
           }
         }
-      }
-  }
+    }
 }
 
 mapping clause assembly = STORE(imm, rs2, rs1, size, aq, rl)

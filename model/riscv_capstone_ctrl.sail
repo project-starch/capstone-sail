@@ -19,5 +19,5 @@ register switch_cap : cap_t
 /* registers for normal world PC and stack pointer */
 register normal_pc : xlenbits
 register normal_sp  : regtype
-register switch_reg : bits(5)
-register exit_reg : bits(5)
+register switch_reg : regidx
+register exit_reg : regidx
