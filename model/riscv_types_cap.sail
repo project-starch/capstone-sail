@@ -210,12 +210,20 @@ function decode_cap(cap: cap_t) -> decodedcap_t = {
             SealedCapMetadata((base_addr, async))
         },
         CAP_TYPE_SEALEDRET => {
-            /* TODO: */
-            SealedRetCapMetadata(EXTZ(0b0), EXTZ(0b0), EXTZ(0b0), EXTZ(0b0))
+            let async : bits(2)
+                @ reg : bits(5)
+                @ _ : bits(10) /* reserved */
+                @ offset : bits(13)
+                @ cursor : xlenbits = metadata_bits;
+            let base_addr : xlenbits = cursor + to_bits(xlen_val, 64 * 31) - (EXTZ(offset) : xlenbits);
+            SealedRetCapMetadata(cursor, base_addr, async, reg)
         }, 
         CAP_TYPE_EXIT => {
-            /* TODO: */
-            ExitCapMetadata(EXTZ(0b0), EXTZ(0b0))
+            let _ : bits(17) /* reserved */
+                @ offset : bits(13)
+                @ cursor : xlenbits = metadata_bits;
+            let base_addr : xlenbits = cursor + to_bits(xlen_val, 64 * 31) - (EXTZ(offset) : xlenbits);
+            ExitCapMetadata(cursor, base_addr)
         }
     } in (ni, metadata)
 }
@@ -291,18 +299,18 @@ function encode_cap(dcap: decodedcap_t) -> cap_t = {
             ni @ captype_bits(CAP_TYPE_SEALED) @ async @ EXTZ(0b0) : bits(28) /* reserved*/ @ base_addr
         },
         SealedRetCapMetadata(cursor, base_addr, async, reg) => {
-            /* size of region is 128 * 34, we allow 128 * (64 - 34) / 2 = 128 * 15 bytes below or above */
+            /* size of region is 128 * 33, we allow 128 * (64 - 33) / 2 = 64 * 31 bytes below or above */
             /* we do not check for now */
-            //let offset = (cursor - base_addr + ((EXTZ(0xf) : xlenbits) << (EXTZ(0x7) : xlenbits))) : bits(13);
-            // ni @ captype_bits(ty) @ async @ reg @ EXTZ(0b0) : bits(10) /* reserved*/ @ offset @ cursor
-            /* TODO: this is not quite right */
-            EXTZ(0b0)
+            let offset = (cursor + to_bits(xlen_val, 64 * 31) - base_addr)[12..0] in
+            ni @ captype_bits(CAP_TYPE_SEALEDRET) @ async @ reg @ EXTZ(0b0) : bits(10) /* reserved*/ @ offset @ cursor
         },
         ExitCapMetadata(cursor, base_addr) => {
-            /* TODO: */
-            EXTZ(0b0)
+            /* same size for the offset field */
+            let offset = (cursor + to_bits(xlen_val, 64 * 31) - base_addr)[12..0] in
+            ni @ captype_bits(CAP_TYPE_EXIT) @ EXTZ(0b0) : bits(17) /* reserved*/ @ offset @ cursor
         },
         _ => {
+            assert(false);
             EXTZ(0b0)
         }
     }
