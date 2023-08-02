@@ -98,7 +98,8 @@ mapping captype_bits : captype_t <-> captypebits = {
 function captype_grants_access(ty: captype_t, is_write: bool) -> bool = {
     /* FIXME: the handling of uninitialised cap is not properly done yet */
     /* uninitialised cap is only allowed to be written to */
-    ty == CAP_TYPE_LIN | ty == CAP_TYPE_NONLIN | (is_write & ty == CAP_TYPE_UNINIT)
+    ty == CAP_TYPE_LIN | ty == CAP_TYPE_NONLIN | ty == CAP_TYPE_SEALEDRET 
+        | ty == CAP_TYPE_EXIT | (is_write & ty == CAP_TYPE_UNINIT)
 }
 
 /* does the capability type not allow duplicating? */
@@ -408,8 +409,13 @@ function cap_bound_size(cap: cap_t) -> xlenbits = {
 }
 
 function cap_in_bound(cap: cap_t, addr: xlenbits, width: int) -> bool = {
-    let (start_addr, end_addr) = cap_bounds(cap) in
-        unsigned(start_addr) <= unsigned(addr) & unsigned(addr) + width <= unsigned(end_addr)
+    let ty = cap_type(cap);
+    let (start_addr, end_addr) = cap_bounds(cap);
+    let (start_addr, end_addr) = if ty == CAP_TYPE_SEALEDRET | ty == CAP_TYPE_EXIT then {
+        (start_addr + to_bits(xlen_val, 3 * caplen_bytes_v), end_addr)
+    } else (start_addr, end_addr);
+
+    unsigned(start_addr) <= unsigned(addr) & unsigned(addr) + width <= unsigned(end_addr)
 }
 
 
