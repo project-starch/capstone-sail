@@ -386,7 +386,8 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_INIT)) = {
                 handle_capstone_except(E_Illegal_Op_Val());
                 RETIRE_FAIL
             } else {
-                let ncv = cap_set_cursor(capstone_initialise_nocheck(cv), v);
+                let (base, _) = cap_bounds(cv);
+                let ncv = cap_set_cursor(capstone_initialise_nocheck(cv), base + v);
                 reg_overwrite(rd_v);
                 X(rs1) = reg_moved(rs1_v);
                 X(rd) = CapVal(ncv);
