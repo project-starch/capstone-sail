@@ -159,6 +159,11 @@ function is_CSR_defined (csr : csreg, p : Privilege) -> bool =
     /* user mode: Zkr */
     0x015 => haveZkr(),
 
+    /* Capstone-specific CSRs */
+    0x801 => capstone_in_secure_world(),  // tval
+    0x802 => capstone_in_secure_world(),  // cause
+    0x803 => capstone_in_normal_world() , // emode
+
     /* check extensions */
     _     => ext_is_CSR_defined(csr, p)
   }
@@ -207,12 +212,27 @@ function check_seed_CSR (csr : csreg, p : Privilege, isWrite : bool) -> bool = {
   }
 }
 
+/* Check if the CSR is Capstone-specific.
+ * We do this as the current encodings of the CSRs do not follow the RISC-V
+ * convention for access control.
+ */
+function check_CSR_Capstone(csr : csreg) -> bool = {
+  match (csr) {
+    0x801 => true,
+    0x802 => true,
+    0x803 => true,
+    _     => false
+  }
+}
+
+
 function check_CSR(csr : csreg, p : Privilege, isWrite : bool) -> bool =
     is_CSR_defined(csr, p)
-  & check_CSR_access(csrAccess(csr), csrPriv(csr), p, isWrite)
-  & check_TVM_SATP(csr, p)
-  & check_Counteren(csr, p)
-  & check_seed_CSR(csr, p, isWrite)
+  & (check_CSR_Capstone(csr)
+    | (check_CSR_access(csrAccess(csr), csrPriv(csr), p, isWrite)
+      & check_TVM_SATP(csr, p)
+      & check_Counteren(csr, p)
+      & check_seed_CSR(csr, p, isWrite)))
 
 /* Reservation handling for LR/SC.
  *
@@ -472,8 +492,11 @@ function exception_handler(cur_priv : Privilege, ctl : ctl_result,
     (_, CTL_TRAP(e)) => {
       let del_priv = exception_delegatee(e.trap, cur_priv);
       if   get_config_print_platform()
-      then print_platform("trapping from " ^ to_str(cur_priv) ^ " to " ^ to_str(del_priv)
+      then {
+        print_platform("trapping from " ^ to_str(cur_priv) ^ " to " ^ to_str(del_priv)
                           ^ " to handle " ^ to_str(e.trap));
+        print_platform("In secure world = " ^ (if capstone_in_secure_world() then "true" else "false"));
+      };
       trap_handler(del_priv, false, exceptionType_to_bits(e.trap), pc, e.excinfo, e.ext)
     },
     (_, CTL_MRET())  => {

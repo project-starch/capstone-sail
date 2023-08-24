@@ -164,6 +164,11 @@ mapping clause csr_name_map = 0x7a1  <-> "tdata1"
 mapping clause csr_name_map = 0x7a2  <-> "tdata2"
 mapping clause csr_name_map = 0x7a3  <-> "tdata3"
 
+/* Capstone-specific CSRs */
+mapping clause csr_name_map = 0x801  <-> "tval"
+mapping clause csr_name_map = 0x802  <-> "cause"
+mapping clause csr_name_map = 0x803  <-> "emode"
+
 val csr_name : csreg -> string
 overload to_str = {csr_name}
 

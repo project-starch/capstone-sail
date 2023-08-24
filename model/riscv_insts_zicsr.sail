@@ -161,6 +161,11 @@ function readCSR csr : csreg -> xlenbits = {
     /* user mode: Zkr */
     (0x015,  _) => read_seed_csr(),
 
+    /* Capstone-specific CSRs */
+    (0x801, _) => ctval, /* TODO: Capstone CSR read */
+    (0x802, _) => ccause,
+    (0x803, _) => EXTZ(bit_to_bits(emode)),
+
     _           => /* check extensions */
                    match ext_read_CSR(csr) {
                      Some(res) => res,
@@ -240,6 +245,11 @@ function writeCSR (csr : csreg, value : xlenbits) -> unit = {
 
     /* user mode: seed (entropy source). writes are ignored */
     (0x015,  _) => write_seed_csr(),
+
+    /* Capstone-specific CSRs */
+    (0x801, _) => { ctval = value; Some(ctval) },
+    (0x802, _) => { ccause = value; Some(ccause) },
+    (0x803, _) => { emode = value[0]; Some(EXTZ(bit_to_bits(emode))) },
 
     _           => ext_write_CSR(csr, value)
   };
