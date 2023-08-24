@@ -13,7 +13,7 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_LDC)) = {
             /* load using a capability */
             let ty = cap_type(c); 
             let perm = cap_perm(c);
-            if capnode_query(cap_nodeid(c)) == 0b1 then {
+            if capnode_query(cap_nodeid(c)) == 0b0 then {
                 handle_capstone_except(E_Invalid_Cap());
                 RETIRE_FAIL
             } else if (ty != CAP_TYPE_LIN &
@@ -102,7 +102,7 @@ function clause execute (CAPSTONE_INSN_S(rs2, rs1, imm7, imm5, CAPSTONE_STC)) = 
             /* store using a capability */
             let ty = cap_type(c); 
             let perm = cap_perm(c);
-            if capnode_query(cap_nodeid(c)) == 0b1 then {
+            if capnode_query(cap_nodeid(c)) == 0b0 then {
                 handle_capstone_except(E_Invalid_Cap());
                 RETIRE_FAIL
             } else if (ty != CAP_TYPE_LIN &

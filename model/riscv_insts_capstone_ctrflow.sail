@@ -80,7 +80,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = {
     match (rs1_v, rs2_v) {
       (CapVal(c), RawVal(v)) => {
         let (nid, metadata) = decode_cap(c);
-        if capnode_query(nid) != 0b1 then {
+        if capnode_query(nid) == 0b0 then {
           handle_capstone_except(E_Invalid_Cap());
           return RETIRE_FAIL;
         };
@@ -281,7 +281,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
     match rs1_v {
       CapVal(c) => {
         let (nid, metadata) = decode_cap(c);
-        if capnode_query(nid) != 0b1 then {
+        if capnode_query(nid) == 0b0 then {
           handle_capstone_except(E_Invalid_Cap());
           return RETIRE_FAIL;
         };
@@ -395,7 +395,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
     match (rs1_v, rs2_v) {
       (CapVal(c), RawVal(v)) => {
         let (nid, metadata) = decode_cap(c);
-        if capnode_query(nid) != 0b1 then {
+        if capnode_query(nid) == 0b0 then {
           handle_capstone_except(E_Invalid_Cap());
           return RETIRE_FAIL;
         };
