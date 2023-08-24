@@ -88,7 +88,7 @@ mapping clause assembly = CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_LDC)
 
 /************************************************************/
 
-mapping clause encdec = CAPSTONE_INSN_S(rs2, rs1, imm7, imm5, CAPSTONE_STC)   <-> imm7 @ rs2 @ rs1 @ 0b110 @ imm5 @ 0b1011011
+mapping clause encdec = CAPSTONE_INSN_S(rs2, rs1, imm7, imm5, CAPSTONE_STC)   <-> imm7 @ rs2 @ rs1 @ 0b100 @ imm5 @ 0b1011011
 
 function clause execute (CAPSTONE_INSN_S(rs2, rs1, imm7, imm5, CAPSTONE_STC)) = {
     let rs2_v : regtype = X(rs2);
