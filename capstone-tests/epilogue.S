@@ -1,3 +1,5 @@
+_exit_begin:
+
 .section .text
 exit:
     cs.capcreate ca4
@@ -20,3 +22,5 @@ _exit_loop:
     cs.cincoffsetimm ca5, 4(ca4)
     sw x0, 0(a5)
     j _exit_loop
+
+_exit_end:

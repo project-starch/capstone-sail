@@ -423,8 +423,8 @@ type capxlen : Int = caplen - xlen
 
 function cap_set_type(cap: cap_t, new_ty: captype_t) -> cap_t = {
     /* directly change the type bitfield */
-    let _ : captypebits @ cap_no_type : bits(125) = cap in
-        captype_bits(new_ty) @ cap_no_type
+    let ni : capnodeidbits @ _ : captypebits @ cap_no_type : bits(94) = cap in
+        ni @ captype_bits(new_ty) @ cap_no_type
 }
 
 function cap_set_nodeid(cap: cap_t, new_ni: capnodeidbits) -> cap_t = {
