@@ -1,0 +1,34 @@
+.align REG_SIZE_LOG2
+exit:
+    cs.capexit cra, x0
+
+.align REG_SIZE_LOG2
+
+_secure_end:
+
+_exit_begin:
+
+.section .text
+_exit:
+    cs.capcreate ca4
+    la a0, tohost
+    la a1, tohost + 8
+    cs.capbound ca4, a0, a1
+    li a1, -1
+    cs.alloc a0, a1
+    cs.capnode ca4, a0
+    li a0, 1
+    cs.captype ca4, a0
+    li a0, 4
+    cs.capperm ca4, a0
+
+_exit_loop:
+    li a7, 9
+    li a0, 0
+    li t0, 1
+    sw t0, 0(a4)
+    cs.cincoffsetimm ca5, 4(ca4)
+    sw x0, 0(a5)
+    j _exit_loop
+
+_exit_end:

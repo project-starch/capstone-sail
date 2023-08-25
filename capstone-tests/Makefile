@@ -1,17 +1,18 @@
 SHELL:=/bin/bash
 
-# by default, TransCapstone is disabled
-TRANSCAPSTONE_ENABLED?=0
+# by default, start in secure world
+START_IN_NORMAL?=0
 
-ifeq ($(TRANSCAPSTONE_ENABLED),0)
-TESTSUITE_SOURCE_PATH=./testsuite/capstone
-PREAMBLE_FILE=./preamble.S
+ifeq ($(START_IN_NORMAL),0)
+TESTSUITE_SOURCE_PATH=./testsuite/secure-world
+PREAMBLE_FILE=./preamble-secure.S
+EPILOGUE_FILE=./epilogue-secure.S
 else
-TESTSUITE_SOURCE_PATH=./testsuite/transcapstone
-PREAMBLE_FILE=./preamble-transcapstone.S
+TESTSUITE_SOURCE_PATH=./testsuite/normal-world
+PREAMBLE_FILE=./preamble-normal.S
+EPILOGUE_FILE=./epilogue-normal.S
 endif
 
-EPILOGUE_FILE=./epilogue.S
 TRANSFORM_CMD=gawk -f ./transform-testcase.awk
 ASM_SOURCES=$(filter-out $(TESTSUITE_SOURCE_PATH)/exit.S,$(wildcard $(TESTSUITE_SOURCE_PATH)/*.S))
 TARGETS=$(patsubst $(TESTSUITE_SOURCE_PATH)/%.S,build/%,$(ASM_SOURCES))
@@ -36,7 +37,7 @@ C_SIM_FLAGS?=-V
 endif
 
 LINKER_SCRIPT?=-T env/p/link.ld 
-CFLAGS=-nostdlib -static -I env/p -I macros -I $(TESTSUITE_SOURCE_PATH) $(LINKER_SCRIPT) $(EXTRA_CFLAGS)
+CFLAGS=-nostdlib -static -I env/p -I macros -I testsuite -I $(TESTSUITE_SOURCE_PATH) $(LINKER_SCRIPT) $(EXTRA_CFLAGS)
 
 OCAML_SIM=../ocaml_emulator/riscv_ocaml_sim_RV64
 C_SIM=../c_emulator/riscv_sim_RV64
