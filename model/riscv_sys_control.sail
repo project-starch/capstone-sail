@@ -591,14 +591,15 @@ function handle_interrupt(i : InterruptType, del_priv : Privilege) -> unit = {
 val init_capstone : unit -> unit effect {wreg} 
 function init_capstone() = {
     print_bits("Revocation node mem base = ", rnode_mem_base());
+    /* initialise the init capability */
     match(capnode_duplicate(capnode_id_invalid, true)) {
       Some(new_node_id) => {
-        PCCap = encode_cap((new_node_id,
+        cinit = encode_cap((new_node_id,
                             LinearCapMetadata((
                               EXTZ(0b0) : xlenbits,
                               EXTZ(0b0) : xlenbits,
                               EXTZ(0b1) : xlenbits << to_bits(xlen_val, xlen_val - 1),
-                              CAP_PERM_RX
+                              CAP_PERM_RWX
                             ))
                           ));
       },
