@@ -295,10 +295,11 @@ function capstone_gen_genesis() -> cap_t = {
 }
 
 function capstone_cap_initialised(c: cap_t) -> bool = {
+    assert(cap_type(c) == CAP_TYPE_UNINIT);
     let (_, end_addr) = cap_bounds(c);
     let cursor = cap_cursor(c);
     /* uninitialised capability with cursor reaching the end address */
-    cap_type(c) == CAP_TYPE_UNINIT & cursor == end_addr;
+    cursor == end_addr
 }
 
 
@@ -449,4 +450,8 @@ function capstone_except_transfer(except_code: xlenbits, exit_code: xlenbits) ->
         /* we use exit code instead of exception code here */
         capstone_async_exit(false, exit_code);
     }
+}
+
+function capstone_addr_aligned(addr: xlenbits, size: int) -> bool = {
+    ((addr >> to_bits(xlen_val, size)) << to_bits(xlen_val, size)) == addr
 }

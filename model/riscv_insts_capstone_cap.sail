@@ -38,7 +38,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SHRINK)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
-    match((rd_v, rs1_v, rs2_v)) {
+    match(rd_v, rs1_v, rs2_v) {
         (CapVal(cv), RawVal(v1), RawVal(v2)) => {
             let ty = cap_type(cv);
             let (base_addr, end_addr) = cap_bounds(cv);
@@ -46,7 +46,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SHRINK)) = {
             if ty != CAP_TYPE_LIN & ty != CAP_TYPE_NONLIN & ty != CAP_TYPE_UNINIT then {
                 handle_capstone_except(E_Cap_Type_Fault());
                 RETIRE_FAIL
-            } else if  unsigned(v1) <= unsigned(v2) |
+            } else if  unsigned(v1) >= unsigned(v2) |
                        unsigned(v1) < unsigned(base_addr) |
                        unsigned(v2) > unsigned(end_addr) then {
                 handle_capstone_except(E_Illegal_Op_Val());
@@ -97,7 +97,12 @@ function clause execute (CAPSTONE_INSN_R(imm, rs1, rd, CAPSTONE_TIGHTEN)) = {
                 handle_capstone_except(E_Illegal_Op_Val());
                 RETIRE_FAIL
             } else {
-                match(cap_tighten(cv, capperm_bits(imm[2..0]))) {
+                let perm : capperm_t = if unsigned(imm) > 7 then
+                    CAP_PERM_NA
+                else
+                    capperm_bits(imm[2..0]);
+
+                match(cap_tighten(cv, perm)) {
                     Some(ncv) => {
                         X(rd) = CapVal(ncv);
                     },
@@ -161,20 +166,33 @@ function clause execute (CAPSTONE_INSN_R(imm, rs1, rd, CAPSTONE_LCC)) = {
     let rd_v : regtype = X(rd);
     match rs1_v {
         CapVal(cv) => {
-            let res : xlenbits = match unsigned(imm) {
-                0 => cap_get_valid_xlenbits(cv),
-                1 => cap_get_type_xlenbits(cv),
-                2 => cap_get_cursor_xlenbits(cv),
-                3 => cap_get_base_xlenbits(cv),
-                4 => cap_get_end_xlenbits(cv),
-                5 => cap_get_perms_xlenbits(cv),
-                6 => cap_get_async_xlenbits(cv),
-                7 => cap_get_reg_xlenbits(cv),
-                _ => EXTZ(0b0) : xlenbits
-            };
-            reg_overwrite(rd_v);
-            X(rd) = RawVal(res);
-            RETIRE_SUCCESS
+            let ty = cap_type(cv) in
+            let imm_v = unsigned(imm) in
+            let bad_cap_type =
+                (imm_v == 2 & ty == CAP_TYPE_SEALED) |
+                (imm_v == 4 & (ty == CAP_TYPE_SEALED | ty == CAP_TYPE_SEALEDRET | ty == CAP_TYPE_EXIT)) |
+                (imm_v == 5 & (ty == CAP_TYPE_SEALED | ty == CAP_TYPE_SEALEDRET | ty == CAP_TYPE_EXIT)) |
+                (imm_v == 6 & ty != CAP_TYPE_SEALED & ty != CAP_TYPE_SEALEDRET) |
+                (imm_v == 7 & ty != CAP_TYPE_SEALEDRET) in
+            if bad_cap_type then {
+                handle_capstone_except(E_Cap_Type_Fault());
+                RETIRE_FAIL
+            } else {
+                let res : xlenbits = match unsigned(imm) {
+                    0 => cap_get_valid_xlenbits(cv),
+                    1 => cap_get_type_xlenbits(cv),
+                    2 => cap_get_cursor_xlenbits(cv),
+                    3 => cap_get_base_xlenbits(cv),
+                    4 => cap_get_end_xlenbits(cv),
+                    5 => cap_get_perms_xlenbits(cv),
+                    6 => cap_get_async_xlenbits(cv),
+                    7 => cap_get_reg_xlenbits(cv),
+                    _ => EXTZ(0b0) : xlenbits
+                };
+                reg_overwrite(rd_v);
+                X(rd) = RawVal(res);
+                RETIRE_SUCCESS
+            }
         },
         _ => {
             handle_capstone_except(E_Op_Type_Fault());
@@ -194,7 +212,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SCC)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
-    match((rs1_v, rs2_v)) {
+    match(rs1_v, rs2_v) {
         /* we do not allow setting cursor of an uninitialised capability */
         /* instead of faulting we do nothing if the type does not have cursor */
         (CapVal(cv), RawVal(v)) => {
@@ -203,8 +221,10 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SCC)) = {
                 handle_capstone_except(E_Cap_Type_Fault());
                 RETIRE_FAIL
             } else {
-                X(rs1) = reg_moved(rs1_v);
-                reg_overwrite(rd_v);
+                if rs1 != rd then {
+                    X(rs1) = reg_moved(rs1_v);
+                    reg_overwrite(rd_v);
+                };
                 X(rd) = CapVal(cap_set_cursor(cv, v));
                 RETIRE_SUCCESS
             }
@@ -227,7 +247,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SPLIT)) = {
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
     let rd_v : regtype = X(rd);
-    match((rs1_v, rs2_v)) {
+    match(rs1_v, rs2_v) {
         (CapVal(c), RawVal(v)) => {
             let node_id = cap_nodeid(c);
             let ty = cap_type(c);
@@ -238,14 +258,15 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SPLIT)) = {
                 handle_capstone_except(E_Invalid_Cap());
                 RETIRE_FAIL
             } else if ty != CAP_TYPE_LIN & ty != CAP_TYPE_NONLIN then {
-                handle_capstone_except(E_Op_Type_Fault());
+                handle_capstone_except(E_Cap_Type_Fault());
                 RETIRE_FAIL
             } else if unsigned(v) <= unsigned(base_addr) | unsigned(v) >= unsigned(end_addr) then {
                 handle_capstone_except(E_Illegal_Op_Val());
                 RETIRE_FAIL
             } else {
-                /* duplicate the node */
-                if ty == CAP_TYPE_LIN then {
+                if rs1 == rd then ()
+                else if ty == CAP_TYPE_LIN then {
+                    /* duplicate the node */
                     match capnode_duplicate(node_id, false) {
                         Some(new_node_id) => {
                             X(rs1) = CapVal(encode_cap((node_id, LinearCapMetadata(base_addr, base_addr, v, perm))));
@@ -292,13 +313,16 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_SEAL)) = {
                     if not(CAP_PERM_RW <=_p perms) then {
                         handle_capstone_except(E_Cap_Perm_Fault());
                         RETIRE_FAIL
-                    } else if unsigned(end_addr - base_addr) < 33 * caplen_bytes_v then {
+                    } else if unsigned(end_addr - base_addr) < 33 * caplen_bytes_v |
+                        not(capstone_addr_aligned(base_addr, caplen_bytes_w)) then {
+                        /* FIXME: here we do not perform check on the memory content yet */
                         handle_capstone_except(E_Illegal_Op_Val());
                         RETIRE_FAIL
                     } else {
-                        /* TODO: alignment check */
-                        X(rs1) = reg_moved(rs1_v);
-                        reg_overwrite(rd_v);
+                        if rs1 != rd then {
+                            X(rs1) = reg_moved(rs1_v);
+                            reg_overwrite(rd_v);
+                        };
                         X(rd) = CapVal(encode_cap((node_id, SealedCapMetadata(base_addr, 0b00))));
 
                         RETIRE_SUCCESS
@@ -341,7 +365,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MREV)) = {
                                 let old_cap = (new_node_id, LinearCapMetadata(cursor, start_addr, end_addr, perm));
                                 let new_cap = (node_id, RevocationCapMetadata(cursor, start_addr, end_addr, perm));
                                 X(rs1) = CapVal(encode_cap(old_cap));
-                                reg_overwrite(rd_v);
+                                reg_overwrite(rd_v); /* this is required no matter if rd = rs1 */
                                 X(rd) = CapVal(encode_cap(new_cap));
                             },
                             None() => {
@@ -386,10 +410,12 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_INIT)) = {
                 handle_capstone_except(E_Illegal_Op_Val());
                 RETIRE_FAIL
             } else {
+                if rs1 != rd then {
+                    reg_overwrite(rd_v);
+                    X(rs1) = reg_moved(rs1_v);
+                };
                 let (base, _) = cap_bounds(cv);
                 let ncv = cap_set_cursor(capstone_initialise_nocheck(cv), base + v);
-                reg_overwrite(rd_v);
-                X(rs1) = reg_moved(rs1_v);
                 X(rd) = CapVal(ncv);
 
                 RETIRE_SUCCESS
@@ -474,10 +500,13 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CINCOFFSET)) = {
                 handle_capstone_except(E_Cap_Type_Fault());
                 RETIRE_FAIL
             } else {
-                let new_cursor = cap_cursor(c) + offset;
-                X(rd) = CapVal(cap_set_cursor(c, new_cursor));
-                reg_overwrite(rd_v);
-                if rs1 != rd then X(rs1) = reg_moved(rs1_v); /* only when the source register is not simultaneously written */
+                if rs1 != rd then {
+                    /* only when the source register is not simultaneously written */
+                    X(rs1) = reg_moved(rs1_v);
+                    reg_overwrite(rd_v);
+                };
+                let new_cursor = cap_cursor(c) + offset in
+                    X(rd) = CapVal(cap_set_cursor(c, new_cursor));
 
                 RETIRE_SUCCESS
             }
@@ -509,10 +538,13 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CINCOFFSETIMM)) 
                 handle_capstone_except(E_Cap_Type_Fault());
                 RETIRE_FAIL
             } else {
-                let new_cursor = cap_cursor(c) + imm_v;
-                X(rd) = CapVal(cap_set_cursor(c, new_cursor));
-                reg_overwrite(rd_v);
-                if rs1 != rd then X(rs1) = reg_moved(rs1_v); /* only when the source register is not simultaneously written */
+                if rs1 != rd then {
+                    /* only when the source register is not simultaneously written */
+                    X(rs1) = reg_moved(rs1_v);
+                    reg_overwrite(rd_v);
+                };
+                let new_cursor = cap_cursor(c) + imm_v in
+                    X(rd) = CapVal(cap_set_cursor(c, new_cursor));
 
                 RETIRE_SUCCESS
             }

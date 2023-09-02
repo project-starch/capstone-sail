@@ -37,7 +37,7 @@ update the ref count for a given node id directly
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RCUPDATE)) = {
     let rs1_v : regtype = X(rs1);
     let rd_v : regtype = X(rd);
-    match((rd_v, rs1_v)) {
+    match(rd_v, rs1_v) {
         (RawVal(node_id), RawVal(delta)) => {
             capnode_rcupdate(truncate(node_id, capnodeidlen_v), truncate(delta, capnodecounterlen_v));
             RETIRE_SUCCESS
@@ -131,7 +131,7 @@ mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPTYPE)   <-> 0b
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPTYPE)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
-    match((rs1_v, rd_v)) {
+    match(rs1_v, rd_v) {
         (RawVal(v), CapVal(cv)) if captype_bits_backwards_matches(v[2..0]) => { 
             // note that the high bits are not used
             X(rd) = CapVal(cap_set_type(cv, captype_bits(v[2..0])));
@@ -156,7 +156,7 @@ mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPNODE)   <-> 0b
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPNODE)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
-    match((rs1_v, rd_v)) {
+    match(rs1_v, rd_v) {
         (RawVal(v), CapVal(cv)) => {
             X(rd) = CapVal(cap_set_nodeid(cv, v[30..0]));
             RETIRE_SUCCESS
@@ -180,7 +180,7 @@ mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPPERM)   <-> 0b
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPPERM)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
-    match((rs1_v, rd_v)) {
+    match(rs1_v, rd_v) {
         (RawVal(v), CapVal(cv)) if capperm_bits_backwards_matches(v[2..0]) => {
             X(rd) = CapVal(cap_set_perm(cv, capperm_bits(v[2..0])));
             RETIRE_SUCCESS
@@ -205,7 +205,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPBOUND)) = {
     let rd_v : regtype = X(rd);
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
-    match((rs1_v, rs2_v, rd_v)) {
+    match(rs1_v, rs2_v, rd_v) {
         (RawVal(v1), RawVal(v2), CapVal(cv)) => {
             X(rd) = CapVal(cap_set_bound_cursor(cv, v1, v1, v2));
             RETIRE_SUCCESS
@@ -242,7 +242,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_TAGSET)) = {
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
 
-    match((rs1_v, rs2_v)) {
+    match(rs1_v, rs2_v) {
         (RawVal(addr), RawVal(tag)) => {
             assert(mem_tag_set(addr, bit_to_bits(tag[0])));
             RETIRE_SUCCESS

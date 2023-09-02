@@ -38,7 +38,7 @@ mapping capperm_string : capperm_t <-> string = {
 
 infix 4 <=_p
 function operator <=_p (perm_a : capperm_t, perm_b : capperm_t) -> bool = {
-    match((perm_a, perm_b)) {
+    match(perm_a, perm_b) {
         (p1, p2) if p1 == p2 => true,
 
         (CAP_PERM_NA, _) => true,
