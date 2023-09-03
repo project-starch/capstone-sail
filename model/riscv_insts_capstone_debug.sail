@@ -98,7 +98,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_REV)) = {
     let rs1_v : regtype = X(rs1);
     match(rs1_v) {
         RawVal(node_id) => {
-            capnode_revoke(truncate(node_id, capnodeidlen_v));
+            let _ = capnode_revoke(truncate(node_id, capnodeidlen_v));
             RETIRE_SUCCESS
         },
         _ => {

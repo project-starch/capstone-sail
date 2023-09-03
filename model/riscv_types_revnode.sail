@@ -31,14 +31,14 @@ struct capnode_t = {
   next: capnodeidbits,
   prev: capnodeidbits,
   counter: capnodecounterbits,
-  freed: bits(1),
+  exclusive: bits(1),
   valid: bits(1)
 }
 
 val capnode_bits : capnode_t <-> capnodebits
 
 function capnode_bits_forwards(n: capnode_t) -> capnodebits = {
-  n.depth @ n.next @ n.prev @ n.counter @ n.freed @ n.valid
+  n.depth @ n.next @ n.prev @ n.counter @ n.exclusive @ n.valid
 }
 
 function capnode_bits_forwards_matches(n: capnode_t) -> bool = {
@@ -47,13 +47,13 @@ function capnode_bits_forwards_matches(n: capnode_t) -> bool = {
 
 function capnode_bits_backwards(b: capnodebits) -> capnode_t = {
   let depth : capnodeidbits @ next : capnodeidbits @ prev : capnodeidbits
-    @ counter : capnodecounterbits @ freed : bits(1) @ valid : bits(1) = b in
+    @ counter : capnodecounterbits @ exclusive : bits(1) @ valid : bits(1) = b in
   struct {
     depth = depth,
     next = next,
     prev = prev,
     counter = counter,
-    freed = freed,
+    exclusive = exclusive,
     valid = valid
   }
 }
@@ -105,10 +105,12 @@ function capnode_alloc() -> option(capnodeidbits) = {
 }
 
 /* revoke with a given node, which invalidates all nodes in the subtree */
-function capnode_revoke(node_id : capnodeidbits) -> unit = {
+function capnode_revoke(node_id : capnodeidbits) -> bool = {
   let root_node = capnode_read(node_id);
   cur_node_id : capnodeidbits = root_node.next;
   cur_node_intree : bool = true;
+  /* record whether this revocation operation involves invalidating an exclusive node */
+  exclusive_node_invalidated : bool = false;
   while(cur_node_id != capnode_id_invalid & cur_node_intree) do {
     let cur_node = capnode_read(cur_node_id); 
     if(unsigned(cur_node.depth) <= unsigned(root_node.depth)) then {
@@ -116,6 +118,7 @@ function capnode_revoke(node_id : capnodeidbits) -> unit = {
     } else {
       let new_node = {cur_node with valid = 0b0}; /* invalidate the node */
       assert(capnode_write(cur_node_id, new_node));
+      exclusive_node_invalidated = exclusive_node_invalidated | bit_to_bool(cur_node.exclusive[0]);
       cur_node_id = cur_node.next;
     }
   };
@@ -125,6 +128,7 @@ function capnode_revoke(node_id : capnodeidbits) -> unit = {
     let cur_node = capnode_read(cur_node_id) in
       assert(capnode_write(cur_node_id, {cur_node with prev = node_id}));
   };
+  exclusive_node_invalidated
 }
 
 /* updates the reference count */
@@ -133,7 +137,6 @@ function capnode_rcupdate(node_id : capnodeidbits, delta : capnodecounterbits) -
   new_node = {node with counter = node.counter + delta};
   if (new_node.counter == EXTZ(0b0)) then {
     /* free the node when the counter reaches zero */
-    new_node.freed = 0b1;
     new_node.next = capnode_free_head;
     capnode_free_head = node_id;
     assert(capnode_write(node_id, new_node));
@@ -161,7 +164,7 @@ function capnode_duplicate(node_id : capnodeidbits, as_child : bool) -> option(c
           next = capnode_id_invalid,
           prev = capnode_id_invalid,
           counter = EXTZ(0b1), /* TODO: here we assume that the new node will be immediately referenced */
-          freed = 0b0,
+          exclusive = 0b1, /* by defaut, the new node should be exclusive */
           valid = 0b1
         } in assert(capnode_write(new_node_id, new_node));
       } else {

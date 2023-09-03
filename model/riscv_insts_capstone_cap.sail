@@ -7,7 +7,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_REVOKE)) = {
     
     match(rs1_v) {
         CapVal(c) => {
-            let (node_id, _) = decode_cap(c);
+            let (node_id, metadata) = decode_cap(c);
             if capnode_query(node_id) == 0b0 then {
                 handle_capstone_except(E_Invalid_Cap());
                 RETIRE_FAIL
@@ -15,7 +15,21 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_REVOKE)) = {
                 handle_capstone_except(E_Cap_Type_Fault());
                 RETIRE_FAIL
             } else {
-                capnode_revoke(node_id);
+                match metadata {
+                    RevocationCapMetadata(cursor, base_addr, end_addr, perm) => {
+                        let new_cap = if capnode_revoke(node_id) then {
+                            /* exclusive node invalidated, make the result uninitialised cap */
+                            (node_id, UninitialisedCapMetadata(base_addr, base_addr, end_addr, perm))
+                        } else {
+                            /* the result would be a linear capability */
+                            (node_id, LinearCapMetadata(cursor, base_addr, end_addr, perm))
+                        };
+                        X(rs1) = CapVal(encode_cap(new_cap));
+                    },
+                    _ => {
+                        assert(false);
+                    }
+                };
                 RETIRE_SUCCESS
             }
         },
