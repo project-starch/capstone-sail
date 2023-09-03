@@ -13,6 +13,7 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_LDC)) = {
             /* load using a capability */
             let ty = cap_type(c); 
             let perm = cap_perm(c);
+            let addr = cap_cursor(c) + EXTS(imm) : xlenbits; 
             if capnode_query(cap_nodeid(c)) == 0b0 then {
                 handle_capstone_except(E_Invalid_Cap());
                 RETIRE_FAIL
@@ -26,12 +27,14 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_LDC)) = {
             } else if (ty == CAP_TYPE_LIN | ty == CAP_TYPE_NONLIN) & not(CAP_PERM_RO <=_p perm) then {
                 handle_capstone_except(E_Cap_Perm_Fault());
                 RETIRE_FAIL
-            } else if not(cap_in_bound(c, cap_cursor(c) + EXTS(imm), 16)) then {
+            } else if not(cap_in_bound(c, addr, 16)) then {
                 handle_capstone_except(E_Cap_Out_Of_Bounds());
+                RETIRE_FAIL
+            } else if not(capstone_addr_aligned(addr, caplen_bytes_w)) then {
+                handle_capstone_except(E_Load_Addr_Align());
                 RETIRE_FAIL
             } else {
                 /* load data and tag */
-                let addr = cap_cursor(c) + EXTS(imm) : xlenbits; 
                 let v = capstone_load_mem(addr, 16);
                 
                 match v {
@@ -48,7 +51,7 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_LDC)) = {
                         }
                     },
                     _ => {
-                        handle_capstone_except(E_Cap_Type_Fault());
+                        handle_capstone_except(E_Load_Access_Fault());
                         RETIRE_FAIL
                     }
                 }
@@ -58,20 +61,26 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_LDC)) = {
         (false, RawVal(v)) => {
             /* load using raw address */
             let addr = v + EXTS(imm) : xlenbits;
-            let (paddr, cv) = capstone_load_mem_virt(addr, 16);
-            /* TODO: check on the physical address range */
 
-            match cv {
-                CapVal(_) => {
-                    reg_overwrite(rd_v);
-                    X(rd) = cv;
-                    assert(mem_moved(paddr, cv)); /* the value is moved from the original location */
+            if not(capstone_addr_aligned(addr, caplen_bytes_w)) then {
+                handle_capstone_except(E_Load_Addr_Align());
+                RETIRE_FAIL
+            } else {
+                let (paddr, cv) = capstone_load_mem_virt(addr, 16);
+                /* TODO: check on the physical address range */
 
-                    RETIRE_SUCCESS
-                },
-                _ => {
-                    handle_capstone_except(E_Load_Access_Fault());
-                    RETIRE_FAIL
+                match cv {
+                    CapVal(_) => {
+                        reg_overwrite(rd_v);
+                        X(rd) = cv;
+                        assert(mem_moved(paddr, cv)); /* the value is moved from the original location */
+
+                        RETIRE_SUCCESS
+                    },
+                    _ => {
+                        handle_capstone_except(E_Load_Access_Fault());
+                        RETIRE_FAIL
+                    }
                 }
             }
         },
@@ -102,6 +111,7 @@ function clause execute (CAPSTONE_INSN_S(rs2, rs1, imm7, imm5, CAPSTONE_STC)) = 
             /* store using a capability */
             let ty = cap_type(c); 
             let perm = cap_perm(c);
+            let addr = cap_cursor(c) + EXTS(imm);
             if capnode_query(cap_nodeid(c)) == 0b0 then {
                 handle_capstone_except(E_Invalid_Cap());
                 RETIRE_FAIL
@@ -116,14 +126,16 @@ function clause execute (CAPSTONE_INSN_S(rs2, rs1, imm7, imm5, CAPSTONE_STC)) = 
             } else if (ty == CAP_TYPE_LIN | ty == CAP_TYPE_NONLIN) & not(CAP_PERM_WO <=_p perm) then {
                 handle_capstone_except(E_Cap_Perm_Fault());
                 RETIRE_FAIL
-            } else if not(cap_in_bound(c, cap_cursor(c) + EXTS(imm), 16)) then {
-                handle_capstone_except(E_Cap_Out_Of_Bounds());
-                RETIRE_FAIL
             } else if ty == CAP_TYPE_UNINIT & unsigned(imm) != 0 then {
                 handle_capstone_except(E_Illegal_Op_Val());
                 RETIRE_FAIL
+            } else if not(cap_in_bound(c, addr, 16)) then {
+                handle_capstone_except(E_Cap_Out_Of_Bounds());
+                RETIRE_FAIL
+            } else if not(capstone_addr_aligned(addr, caplen_bytes_w)) then {
+                handle_capstone_except(E_SAMO_Addr_Align());
+                RETIRE_FAIL
             } else {
-                let addr = cap_cursor(c) + EXTS(imm);
                 mem_overwrite(addr, to_bits(xlen_val, 16));
                 assert(capstone_store_mem(addr, 16, rs2_v));
                 X(rs2) = reg_moved(rs2_v);
@@ -140,13 +152,18 @@ function clause execute (CAPSTONE_INSN_S(rs2, rs1, imm7, imm5, CAPSTONE_STC)) = 
         (false, RawVal(v), CapVal(_)) => {
             /* store using a raw address */
             let addr = v + EXTS(imm);
-            let (paddr, success) = capstone_store_mem_virt(addr, 16, rs2_v);
-            assert(success);
-            mem_overwrite(paddr, to_bits(xlen_val, 16));
-            /* TODO: check paddr range */
-            X(rs2) = reg_moved(rs2_v);
+            if not(capstone_addr_aligned(addr, caplen_bytes_w)) then {
+                handle_capstone_except(E_SAMO_Addr_Align());
+                RETIRE_FAIL
+            } else {
+                let (paddr, success) = capstone_store_mem_virt(addr, 16, rs2_v);
+                assert(success);
+                mem_overwrite(paddr, to_bits(xlen_val, 16));
+                /* TODO: check paddr range */
+                X(rs2) = reg_moved(rs2_v);
 
-            RETIRE_SUCCESS
+                RETIRE_SUCCESS
+            }
         },
         _ => {
             handle_capstone_except(E_Op_Type_Fault());
