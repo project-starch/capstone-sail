@@ -213,9 +213,13 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CJALR)) = {
             let old_pc_cap = PCCap;
             let old_npc = nextPC;
 
-            reg_overwrite(rd_v);
-            X(rs1) = reg_moved(rs1_v);
-            capstone_redirect_to_cap(c);
+            let new_cursor = cap_cursor(c) + EXTS(imm) : xlenbits;
+            capstone_redirect_to_cap(cap_set_cursor(c, new_cursor));
+
+            if rs1 != rd then {
+              X(rs1) = reg_moved(rs1_v);
+              reg_overwrite(rd_v);
+            };
             X(rd) = CapVal(cap_set_cursor(old_pc_cap, old_npc)); /* save the original next PC */
 
             RETIRE_SUCCESS
@@ -249,7 +253,8 @@ function clause execute (CAPSTONE_INSN_I(rs1, rd, imm, CAPSTONE_CBNZ)) = {
             if(v != EXTZ(0b0)) then {
                 reg_overwrite(CapVal(PCCap));
                 X(rd) = reg_moved(rd_v);
-                capstone_redirect_to_cap(c);
+                let new_cursor = cap_cursor(c) + EXTS(imm) : xlenbits;
+                capstone_redirect_to_cap(cap_set_cursor(c, new_cursor));
             };
             RETIRE_SUCCESS
         },
