@@ -12,7 +12,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)) = {
     let rs1_v : regtype = X(rs1);
     let ra_v : regtype = x1;
 
-    if not(capstone_in_secure_world()) then {
+    if capstone_in_normal_world() then {
         handle_illegal();
         return RETIRE_FAIL;
     };
@@ -26,6 +26,11 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)) = {
         } else
           match metadata {
             SealedCapMetadata(base_addr, async) if async == 0b00 => {
+              if unsigned(rs1) != 1 then {
+                X(rs1) = reg_moved(rs1_v);
+                reg_overwrite(ra_v);
+              };
+
               /* Swap pc */
               let new_pc_cap_v = capstone_mem_xchg(base_addr, 0, CapVal(cur_pc_cap));
               capstone_redirect(new_pc_cap_v);
@@ -36,8 +41,6 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)) = {
               /* Swap csp */
               x2 = capstone_mem_xchg(base_addr, 2, x2);
 
-              X(rs1) = reg_moved(rs1_v);
-              reg_overwrite(ra_v);
               let new_ra_cap_metadata = SealedRetCapMetadata(base_addr, base_addr, 0b00, rd) in
                 x1 = CapVal(encode_cap((nid, new_ra_cap_metadata)));
 
@@ -72,7 +75,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = {
     let rs1_v : regtype = X(rs1);
     let rs2_v : regtype = X(rs2);
 
-    if not(capstone_in_secure_world()) then {
+    if capstone_in_normal_world() then {
         handle_illegal();
         return RETIRE_FAIL;
     };
@@ -134,38 +137,8 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = {
 
                 RETIRE_SUCCESS
               },
-              0b10 => {
-                let new_sealed_pc_cap = cap_set_cursor(cur_pc_cap, v);
-                /* Swap pc */
-                let new_pc_cap_v = capstone_mem_xchg(base_addr, 0, CapVal(new_sealed_pc_cap));
-                match new_pc_cap_v {
-                  CapVal(new_pc_cap) => {
-                    capstone_redirect_to_cap(new_pc_cap);
-                  },
-                  _ => {
-                    handle_illegal();
-                    return RETIRE_FAIL;
-                  }
-                };
-                  
-                /* Swap ceh */
-                ceh = capstone_mem_xchg(base_addr, 1, ceh);
-
-                /* Set cih */
-                cih = CapVal(encode_cap((nid, SealedCapMetadata(base_addr, 0b00))));
-                X(rs1) = reg_moved(rs1_v);
-
-                /* Swap other GPRs */
-                reg_idx : int = 1;
-                while reg_idx < 32 do {
-                  X(to_bits(5, reg_idx)) = capstone_mem_xchg(base_addr, reg_idx + 1, X(to_bits(5, reg_idx)));
-                  reg_idx = reg_idx + 1;
-                };
-
-                RETIRE_SUCCESS
-              },
               _ => {
-                assert(false);
+                handle_capstone_except(E_Cap_Type_Fault());
                 RETIRE_FAIL
               }
             }
@@ -179,7 +152,9 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = {
       (RawVal(vv), RawVal(v)) if vv == EXTZ(0b0) => {
         let new_ceh_cap = cap_set_cursor(cur_pc_cap, v);
         capstone_redirect_to_cap(cepc);
-        cepc = CAP_INVALID;
+        ceh = CapVal(new_ceh_cap);
+        if captype_is_linear(cap_type(cepc)) then
+          cepc = CAP_INVALID;
 
         RETIRE_SUCCESS
       },
@@ -294,6 +269,11 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
         match metadata {
           SealedCapMetadata(base_addr, async) => {
             if async == 0b00 then {
+              if unsigned(rs1) != 1 then {
+                X(rs1) = reg_moved(rs1_v);
+                reg_overwrite(x1);
+              };
+
               /* store the pc and sp values */
               normal_pc = cur_npc;
               normal_sp = cur_sp;
@@ -341,6 +321,7 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPENTER)) = {
               /* set switch_cap */
               let new_switch_cap_metadata = UninitialisedCapMetadata(base_addr, base_addr, base_addr + to_bits(xlen_val, 33 * caplen_bytes_v), CAP_PERM_RW) in
                 switch_cap = encode_cap((nid, new_switch_cap_metadata));
+              reg_overwrite(X(rs1));
               X(rs1) = RawVal(EXTZ(0b0));
 
               /* set switch_reg and exit_reg */
@@ -407,6 +388,10 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
 
         match metadata {
           ExitCapMetadata(cursor, base_addr) => {
+            if rs1 != switch_reg then {
+              X(rs1) = reg_moved(rs1_v);
+            };
+
             /* store pc with modified cursor */
             let new_sealed_pc_cap = cap_set_cursor(cur_pc_cap, v) in
               assert(capstone_mem_store(base_addr, 0, CapVal(new_sealed_pc_cap)));
@@ -422,10 +407,12 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CAPEXIT)) = {
             x2 = normal_sp;
 
             /* write back to switch_reg */
+            reg_overwrite(X(switch_reg));
             let new_sealed_cap_metadata = SealedCapMetadata(base_addr, 0b00) in
               X(switch_reg) = CapVal(encode_cap((nid, new_sealed_cap_metadata)));
               
             /* write exit code */
+            reg_overwrite(X(exit_reg));
             X(exit_reg) = RawVal(EXTZ(0b0));
 
             capstone_enter_normal_world();
