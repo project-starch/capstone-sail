@@ -2,8 +2,6 @@
 
 mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)   <-> 0b0100000 @ rs2 @ rs1 @ 0b001 @ rd @ 0b1011011
 
-/* FIXME: all the below implementations need to be atomic with respect to exception handling */
-
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_CALL)) = {
     /* PC address for resuming execution */    
     let cur_pc_cap = cap_set_cursor(PCCap, nextPC);
@@ -112,17 +110,9 @@ function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_RETURN)) = {
               0b01 => {
                 let new_sealed_pc_cap = cap_set_cursor(cur_pc_cap, v);
                 /* Swap pc */
-                let new_pc_cap_v = capstone_mem_xchg(base_addr, 0, CapVal(new_sealed_pc_cap));
-                match new_pc_cap_v {
-                  CapVal(new_pc_cap) => {
-                    capstone_redirect_to_cap(new_pc_cap);
-                  },
-                  _ => {
-                    handle_illegal();
-                    return RETIRE_FAIL;
-                  }
-                };
-                
+                let new_pc_cap_v = capstone_mem_xchg(base_addr, 0, CapVal(new_sealed_pc_cap)) in
+                  capstone_redirect(new_pc_cap_v);
+
                 /* Store ceh */
                 assert(capstone_store_mem(base_addr + to_bits(xlen_val, caplen_bytes_v), caplen_bytes_v, ceh));
                 ceh = CapVal(encode_cap((nid, SealedCapMetadata(base_addr, 0b00))));
