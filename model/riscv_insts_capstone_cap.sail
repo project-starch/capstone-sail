@@ -451,7 +451,7 @@ mapping clause encdec = CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MOVC)   <-> 0b000
 
 function clause execute (CAPSTONE_INSN_R(rs2, rs1, rd, CAPSTONE_MOVC)) = {
     let rd_v : regtype = X(rd);
-    let rs1_v : regtype = X(rs1);
+    let rs1_v : regtype = if unsigned(rs1) == 0 then CapVal(CAP_INVALID) else X(rs1);
     match(rs1_v) {
         CapVal(_) => {
             if(rd != rs1) then {
