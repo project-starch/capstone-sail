@@ -26,9 +26,9 @@ _exit_loop:
     li a7, 9
     li a0, 0
     li t0, 1
-    sw t0, 0(a4)
-    cs.cincoffsetimm ca5, 4(ca4)
-    sw x0, 0(a5)
+    csw t0, 0(ca4)
+    cs.cincoffsetimm ca5, ca4, 4
+    csw x0, 0(ca5)
     j _exit_loop
 
 _exit_end:
