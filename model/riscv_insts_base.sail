@@ -411,8 +411,19 @@ function clause execute(LOAD(imm, rs1, rd, is_unsigned, width, aq, rl)) = {
           DOUBLE => capstone_load_mem(addr, 8)
         };
         reg_overwrite(X(rd));
-        X(rd) = v;
-        RETIRE_SUCCESS
+        match v {
+          RawVal(res) =>
+            match width {
+              BYTE => process_load(rd, addr, MemValue(res[7..0] : bits(8 * 1)), is_unsigned),
+              HALF => process_load(rd, addr, MemValue(res[15..0] : bits(8 * 2)), is_unsigned),
+              WORD => process_load(rd, addr, MemValue(res[31..0] : bits(8 * 4)), is_unsigned),
+              DOUBLE => process_load(rd, addr, MemValue(res[63..0] : bits(8 * 8)), is_unsigned)
+            },
+          _ => {
+            assert(false);
+            RETIRE_FAIL
+          }
+        }
       },
       _ => {
         handle_illegal();
